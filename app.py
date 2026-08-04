@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Form
+from contextlib import asynccontextmanager
 from fastapi.responses import StreamingResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
@@ -12,7 +13,14 @@ import woo_sync
 from pdf_generator import generate_quote_pdf
 from database import get_db, CompanySettings
 
-app = FastAPI(title="Preventivatore API")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    from database import Base, engine
+    Base.metadata.create_all(bind=engine)
+    yield
+
+app = FastAPI(title="Preventivatore API", lifespan=lifespan)
 security = HTTPBasic()
 
 def authenticate(credentials: HTTPBasicCredentials = Depends(security)):
