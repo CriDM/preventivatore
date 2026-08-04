@@ -1,9 +1,6 @@
+fastapi
+uvicorn[standard]
+pydantic
 reportlab==4.5.0
-pyinstaller==6.20.0
 svglib==1.5.1
-# macOS only - per creare app bundle (installa solo su macOS):
-# py2app==0.28.10
-
-
-customtkinter==5.2.2
 packaging
