@@ -1,6 +1,8 @@
 from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Form
 from contextlib import asynccontextmanager
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
 from typing import List, Optional
@@ -64,6 +66,13 @@ class WooSyncPayload(BaseModel):
     url: str
     consumer_key: str
     consumer_secret: str
+
+
+@app.get("/")
+async def root():
+    return FileResponse("static/index.html")
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.post("/generate-pdf")
 async def generate_pdf(payload: QuotePayload, username: str = Depends(authenticate), db: Session = Depends(get_db)):
