@@ -1,9 +1,9 @@
 name: Build Windows EXE
 
+# DISATTIVATO: Esecuzione automatica disabilitata
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+
 
 jobs:
   build:
