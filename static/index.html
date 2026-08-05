@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="it" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,54 +9,101 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('theme') || 'system';
+            let effectiveTheme = savedTheme;
+            if (savedTheme === 'system') {
+                effectiveTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            document.documentElement.setAttribute('data-bs-theme', effectiveTheme);
+        })();
+    </script>
+
     <style>
-        :root {
+        :root, [data-bs-theme="light"] {
             --primary: #c41e3a;
             --primary-hover: #a0182e;
-            --bg-dark: #0f172a;
+            --bg-page: #f8fafc;
+            --card-bg: #ffffff;
+            --card-border: #e2e8f0;
+            --card-header-bg: rgba(0, 0, 0, 0.02);
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --input-bg: #ffffff;
+            --input-border: #cbd5e1;
+            --input-color: #0f172a;
+            --table-border: #e2e8f0;
+            --summary-bg: #f1f5f9;
+        }
+
+        [data-bs-theme="dark"] {
+            --primary: #e11d48;
+            --primary-hover: #f43f5e;
+            --bg-page: #0f172a;
             --card-bg: #1e293b;
             --card-border: #334155;
+            --card-header-bg: rgba(255, 255, 255, 0.03);
             --text-main: #f8fafc;
             --text-muted: #94a3b8;
-            --accent: #38bdf8;
+            --input-bg: #0f172a;
+            --input-border: #334155;
+            --input-color: #f8fafc;
+            --table-border: #334155;
+            --summary-bg: rgba(15, 23, 42, 0.6);
         }
+
         body {
             font-family: 'Inter', sans-serif;
-            background-color: var(--bg-dark);
+            background-color: var(--bg-page);
             color: var(--text-main);
             min-height: 100vh;
             margin: 0;
             padding-bottom: 60px;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
+
         .navbar-custom {
             background-color: var(--card-bg);
             border-bottom: 1px solid var(--card-border);
             padding: 14px 24px;
         }
+
         .company-logo-img {
             max-height: 38px;
             max-width: 120px;
             object-fit: contain;
-            background: #fff;
+            background: #ffffff;
             padding: 2px 6px;
             border-radius: 6px;
+            border: 1px solid var(--card-border);
         }
+
         .card-custom {
             background-color: var(--card-bg);
             border: 1px solid var(--card-border);
             border-radius: 16px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
             margin-bottom: 24px;
+            color: var(--text-main);
         }
+
+        .card-custom h4, .card-custom h5, .card-custom label {
+            color: var(--text-main) !important;
+        }
+
         .card-header-custom {
-            background-color: rgba(255, 255, 255, 0.03);
+            background-color: var(--card-header-bg);
             border-bottom: 1px solid var(--card-border);
             padding: 16px 20px;
             font-weight: 600;
             display: flex;
             align-items: center;
             justify-content: space-between;
+            color: var(--text-main);
         }
+
         .nav-tabs .nav-link {
             color: var(--text-muted);
             border: none;
@@ -65,32 +112,34 @@
             font-size: 15px;
             border-bottom: 3px solid transparent;
         }
+
         .nav-tabs .nav-link.active {
             color: var(--primary);
             background: transparent;
             border-bottom: 3px solid var(--primary);
             font-weight: 600;
         }
+
         .form-control, .form-select {
-            background-color: #0f172a;
-            border: 1px solid var(--card-border);
-            color: var(--text-main);
+            background-color: var(--input-bg);
+            border: 1px solid var(--input-border);
+            color: var(--input-color);
             border-radius: 8px;
             padding: 10px 14px;
         }
+
         .form-control:focus, .form-select:focus {
-            background-color: #0f172a;
+            background-color: var(--input-bg);
             border-color: var(--primary);
-            color: var(--text-main);
+            color: var(--input-color);
             box-shadow: 0 0 0 0.25rem rgba(196, 30, 58, 0.25);
         }
-        .form-control::placeholder {
-            color: #64748b;
-        }
+
         .table-custom {
             color: var(--text-main);
             vertical-align: middle;
         }
+
         .table-custom th {
             color: var(--text-muted);
             font-size: 13px;
@@ -98,10 +147,12 @@
             letter-spacing: 0.5px;
             border-bottom: 1px solid var(--card-border);
         }
+
         .table-custom td {
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid var(--table-border);
             padding: 10px;
         }
+
         .btn-primary-custom {
             background-color: var(--primary);
             color: #fff;
@@ -112,21 +163,30 @@
             font-size: 16px;
             transition: all 0.2s ease;
         }
+
         .btn-primary-custom:hover {
             background-color: var(--primary-hover);
-            box-shadow: 0 8px 20px rgba(196, 30, 58, 0.4);
+            box-shadow: 0 8px 20px rgba(196, 30, 58, 0.3);
             color: #fff;
         }
+
         .summary-box {
-            background: rgba(15, 23, 42, 0.6);
+            background: var(--summary-bg);
             border: 1px solid var(--card-border);
             border-radius: 12px;
             padding: 20px;
         }
+
         .total-amount {
             font-size: 24px;
             font-weight: 700;
             color: var(--primary);
+        }
+
+        .modal-content {
+            background-color: var(--card-bg);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
         }
     </style>
 </head>
@@ -135,7 +195,7 @@
 <!-- Navbar Header -->
 <nav class="navbar navbar-expand-lg navbar-custom">
     <div class="container-fluid">
-        <a class="navbar-brand d-flex align-items-center text-white fw-bold" href="/">
+        <a class="navbar-brand d-flex align-items-center fw-bold" href="/" style="color: var(--text-main);">
             <div id="companyLogoContainer" class="me-2 d-none">
                 <img id="headerCompanyLogo" class="company-logo-img" alt="Logo">
             </div>
@@ -144,12 +204,24 @@
         </a>
 
         <div class="d-flex align-items-center gap-3">
+            <!-- Theme Selector Dropdown -->
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary btn-sm dropdown-toggle d-flex align-items-center" type="button" id="themeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <span id="themeDropdownLabel"><i class="bi bi-display me-1"></i> Sistema</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="themeDropdown">
+                    <li><button class="dropdown-item d-flex align-items-center" onclick="setTheme('system')"><i class="bi bi-display me-2"></i> Tema di Sistema</button></li>
+                    <li><button class="dropdown-item d-flex align-items-center" onclick="setTheme('light')"><i class="bi bi-sun-fill me-2 text-warning"></i> Chiaro</button></li>
+                    <li><button class="dropdown-item d-flex align-items-center" onclick="setTheme('dark')"><i class="bi bi-moon-stars-fill me-2 text-primary"></i> Scuro</button></li>
+                </ul>
+            </div>
+
             <span id="adminLinkContainer" class="d-none">
                 <a href="/admin" class="btn btn-outline-warning btn-sm">
                     <i class="bi bi-shield-lock-fill me-1"></i> Pannello Admin
                 </a>
             </span>
-            <div class="d-flex align-items-center gap-2 bg-dark px-3 py-1 border border-secondary rounded-pill">
+            <div class="d-flex align-items-center gap-2 border px-3 py-1 rounded-pill" style="background: var(--card-bg); border-color: var(--card-border) !important;">
                 <i class="bi bi-person-circle text-muted"></i>
                 <span id="userUsername" class="small fw-semibold">Utente</span>
             </div>
@@ -165,7 +237,7 @@
     <ul class="nav nav-tabs mb-4" id="mainTabs" role="tablist">
         <li class="nav-item">
             <button class="nav-link active" id="quote-tab" data-bs-toggle="tab" data-bs-target="#quote-pane">
-                <i class="bi bi-plus-circle-fill me-2"></i> Genera Preventivo
+                <i class="bi bi-plus-circle-fill me-2"></i> Genera / Modifica Preventivo
             </button>
         </li>
         <li class="nav-item">
@@ -191,7 +263,7 @@
                     <div class="card card-custom">
                         <div class="card-header-custom">
                             <span><i class="bi bi-person-vcard text-danger me-2"></i> Dati Cliente</span>
-                            <button type="button" class="btn btn-sm btn-outline-light" onclick="clearCustomerFields()">Pulisci</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearCustomerFields()">Pulisci</button>
                         </div>
                         <div class="card-body p-4">
                             <div class="mb-3">
@@ -218,6 +290,7 @@
                     <div class="card card-custom">
                         <div class="card-header-custom">
                             <span><i class="bi bi-file-earmark-text text-danger me-2"></i> Dati Preventivo</span>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="resetQuoteForm()">Nuovo Preventivo</button>
                         </div>
                         <div class="card-body p-4">
                             <div class="mb-3">
@@ -244,21 +317,26 @@
             <div class="card card-custom">
                 <div class="card-header-custom">
                     <span><i class="bi bi-list-stars text-danger me-2"></i> Articoli del Preventivo</span>
-                    <button class="btn btn-sm btn-outline-success" onclick="addRow()">
-                        <i class="bi bi-plus-lg me-1"></i> Aggiungi Riga
-                    </button>
+                    <div>
+                        <button class="btn btn-sm btn-outline-secondary me-2" onclick="clearItemsTable()">
+                            <i class="bi bi-trash3 me-1"></i> Svuota Articoli
+                        </button>
+                        <button class="btn btn-sm btn-outline-success" onclick="addRow()">
+                            <i class="bi bi-plus-lg me-1"></i> Aggiungi Riga
+                        </button>
+                    </div>
                 </div>
                 <div class="card-body p-4">
                     <div class="table-responsive">
                         <table class="table table-custom">
                             <thead>
                                 <tr>
-                                    <th style="width: 40%;">Descrizione Articolo</th>
+                                    <th style="width: 38%;">Descrizione Articolo</th>
                                     <th style="width: 12%;">Quantità</th>
                                     <th style="width: 16%;">Prezzo Unitario (€)</th>
                                     <th style="width: 12%;">IVA %</th>
-                                    <th style="width: 15%; text-align: right;">Totale (€)</th>
-                                    <th style="width: 5%;"></th>
+                                    <th style="width: 14%; text-align: right;">Totale (€)</th>
+                                    <th style="width: 8%; text-align: right;">Azioni</th>
                                 </tr>
                             </thead>
                             <tbody id="itemsBody">
@@ -339,7 +417,7 @@
                 <div class="card-body p-4">
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <h4 class="fw-bold mb-0">Storico Preventivi Generati</h4>
-                        <button class="btn btn-outline-light btn-sm" onclick="loadQuoteArchive()">
+                        <button class="btn btn-outline-secondary btn-sm" onclick="loadQuoteArchive()">
                             <i class="bi bi-arrow-clockwise me-1"></i> Aggiorna Storico
                         </button>
                     </div>
@@ -368,13 +446,81 @@
     </div>
 </div>
 
+<!-- MODAL: MODIFICA CLIENTE -->
+<div class="modal fade" id="editCustomerModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title fw-bold">Modifica Cliente in Anagrafica</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form onsubmit="handleUpdateCustomer(event)">
+                <input type="hidden" id="editCustId">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">NOME CLIENTE / RAGIONE SOCIALE</label>
+                        <input type="text" id="editCustName" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">INDIRIZZO COMPLETO</label>
+                        <input type="text" id="editCustAddr" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">REFERENTE / CONTATTO</label>
+                        <input type="text" id="editCustContact" class="form-control">
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annulla</button>
+                    <button type="submit" class="btn btn-primary">Salva Modifiche</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
     let token = localStorage.getItem('access_token');
     let currentUser = null;
     let customersList = [];
+    let archivedQuotesList = [];
 
+    // --- THEME MANAGEMENT ---
+    function getSavedTheme() {
+        return localStorage.getItem('theme') || 'system';
+    }
+
+    function applyTheme(theme) {
+        let effectiveTheme = theme;
+        if (theme === 'system') {
+            effectiveTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        document.documentElement.setAttribute('data-bs-theme', effectiveTheme);
+        
+        const btnText = document.getElementById('themeDropdownLabel');
+        if (btnText) {
+            if (theme === 'system') btnText.innerHTML = '<i class="bi bi-display me-1"></i> Sistema';
+            else if (theme === 'light') btnText.innerHTML = '<i class="bi bi-sun-fill me-1 text-warning"></i> Chiaro';
+            else btnText.innerHTML = '<i class="bi bi-moon-stars-fill me-1 text-primary"></i> Scuro';
+        }
+    }
+
+    function setTheme(theme) {
+        localStorage.setItem('theme', theme);
+        applyTheme(theme);
+    }
+
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+        if (getSavedTheme() === 'system') {
+            applyTheme('system');
+        }
+    });
+
+    applyTheme(getSavedTheme());
+
+    // --- AUTH & INITIALIZATION ---
     async function checkAuth() {
         if (!token) {
             window.location.href = '/login';
@@ -411,7 +557,7 @@
             // Load initial customer list
             loadCustomers();
             
-            // Add default initial row
+            // Add default initial row if empty
             if (document.querySelectorAll('#itemsBody tr').length === 0) {
                 addRow('Sviluppo / Fornitura Articolo', 1, 100, 22);
             }
@@ -421,6 +567,7 @@
         }
     }
 
+    // --- QUOTE FORM & ITEMS MANAGEMENT ---
     function addRow(name = '', qty = 1, price = 0, vat = 22) {
         const tbody = document.getElementById('itemsBody');
         const tr = document.createElement('tr');
@@ -430,15 +577,44 @@
             <td><input type="number" class="form-control item-price" value="${price}" step="0.01" oninput="calculateTotals()"></td>
             <td><input type="number" class="form-control item-vat" value="${vat}" step="1" oninput="calculateTotals()"></td>
             <td class="text-end fw-bold item-row-total">0,00 €</td>
-            <td class="text-end"><button class="btn btn-sm btn-outline-danger" onclick="removeRow(this)"><i class="bi bi-trash"></i></button></td>
+            <td class="text-end">
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-secondary" onclick="duplicateRow(this)" title="Duplica riga"><i class="bi bi-copy"></i></button>
+                    <button class="btn btn-outline-danger" onclick="removeRow(this)" title="Elimina riga"><i class="bi bi-trash"></i></button>
+                </div>
+            </td>
         `;
         tbody.appendChild(tr);
         calculateTotals();
     }
 
+    function duplicateRow(btn) {
+        const row = btn.closest('tr');
+        const name = row.querySelector('.item-name').value;
+        const qty = row.querySelector('.item-qty').value;
+        const price = row.querySelector('.item-price').value;
+        const vat = row.querySelector('.item-vat').value;
+        addRow(name, qty, price, vat);
+    }
+
     function removeRow(btn) {
         btn.closest('tr').remove();
         calculateTotals();
+    }
+
+    function clearItemsTable() {
+        document.getElementById('itemsBody').innerHTML = '';
+        calculateTotals();
+    }
+
+    function resetQuoteForm() {
+        clearCustomerFields();
+        document.getElementById('oggetto').value = '';
+        document.getElementById('quote_number').value = '';
+        document.getElementById('quote_date').value = new Date().toLocaleDateString('it-IT');
+        document.getElementById('final_notes').value = '';
+        clearItemsTable();
+        addRow('Sviluppo / Fornitura Articolo', 1, 100, 22);
     }
 
     function calculateTotals() {
@@ -472,6 +648,7 @@
         return val.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
     }
 
+    // --- ANAGRAFICA CLIENTI ---
     async function loadCustomers() {
         try {
             const res = await fetch('/api/customers', {
@@ -524,6 +701,9 @@
                         <button onclick="selectCustomerForQuote('${c.name}', '${c.address || ''}', '${c.contact || ''}')" class="btn btn-sm btn-outline-info me-1" title="Usa nel preventivo">
                             <i class="bi bi-check-lg"></i> Usa
                         </button>
+                        <button onclick="openEditCustomerModal(${c.id})" class="btn btn-sm btn-outline-primary me-1" title="Modifica Cliente">
+                            <i class="bi bi-pencil-square"></i> Modifica
+                        </button>
                         <button onclick="deleteCustomer(${c.id})" class="btn btn-sm btn-outline-danger" title="Elimina">
                             <i class="bi bi-trash"></i>
                         </button>
@@ -543,6 +723,49 @@
         bootstrap.Tab.getInstance(quoteTabBtn).show();
     }
 
+    function openEditCustomerModal(id) {
+        const cust = customersList.find(c => c.id === id);
+        if (!cust) return;
+
+        document.getElementById('editCustId').value = cust.id;
+        document.getElementById('editCustName').value = cust.name;
+        document.getElementById('editCustAddr').value = cust.address || '';
+        document.getElementById('editCustContact').value = cust.contact || '';
+
+        new bootstrap.Modal(document.getElementById('editCustomerModal')).show();
+    }
+
+    async function handleUpdateCustomer(e) {
+        e.preventDefault();
+        const id = document.getElementById('editCustId').value;
+        const payload = {
+            name: document.getElementById('editCustName').value,
+            address: document.getElementById('editCustAddr').value,
+            contact: document.getElementById('editCustContact').value
+        };
+
+        try {
+            const res = await fetch(`/api/customers/${id}`, {
+                method: 'PUT',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token 
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('editCustomerModal')).hide();
+                loadCustomers();
+            } else {
+                const err = await res.json();
+                alert("Errore: " + (err.detail || "Impossibile aggiornare cliente"));
+            }
+        } catch (e) {
+            alert("Errore di rete");
+        }
+    }
+
     async function deleteCustomer(id) {
         if (!confirm("Eliminare questo cliente dall'anagrafica?")) return;
         try {
@@ -560,11 +783,13 @@
         const query = document.getElementById('searchCustomerInput').value.toLowerCase();
         const filtered = customersList.filter(c => 
             c.name.toLowerCase().includes(query) || 
-            (c.address && c.address.toLowerCase().includes(query))
+            (c.address && c.address.toLowerCase().includes(query)) ||
+            (c.contact && c.contact.toLowerCase().includes(query))
         );
         renderCustomersTable(filtered);
     }
 
+    // --- GENERATE PDF ---
     async function generatePDF() {
         const btn = document.getElementById('generateBtn');
         btn.disabled = true;
@@ -647,21 +872,22 @@
         }
     }
 
+    // --- STORICO PREVENTIVI & RELOAD / EDIT QUOTE ---
     async function loadQuoteArchive() {
         try {
             const res = await fetch('/api/quotes', {
                 headers: { 'Authorization': 'Bearer ' + token }
             });
-            const quotes = await res.json();
+            archivedQuotesList = await res.json();
             const tbody = document.getElementById('archiveTableBody');
             tbody.innerHTML = '';
 
-            if (quotes.length === 0) {
+            if (archivedQuotesList.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Nessun preventivo salvato nello storico</td></tr>';
                 return;
             }
 
-            quotes.forEach(q => {
+            archivedQuotesList.forEach(q => {
                 tbody.innerHTML += `
                     <tr>
                         <td class="fw-bold text-danger">${q.quote_number}</td>
@@ -670,6 +896,9 @@
                         <td>${q.oggetto || '-'}</td>
                         <td class="fw-bold">${q.total_amount}</td>
                         <td class="text-end">
+                            <button onclick="loadQuoteForEditing(${q.id})" class="btn btn-sm btn-outline-primary me-1" title="Modifica / Ricarica nel form">
+                                <i class="bi bi-pencil-square"></i> Modifica
+                            </button>
                             <button onclick="downloadArchivedPdf(${q.id}, '${q.quote_number}')" class="btn btn-sm btn-outline-success me-1" title="Scarica PDF">
                                 <i class="bi bi-download"></i> PDF
                             </button>
@@ -683,6 +912,43 @@
         } catch (e) {
             console.error(e);
         }
+    }
+
+    function loadQuoteForEditing(quoteId) {
+        const quote = archivedQuotesList.find(q => q.id === quoteId);
+        if (!quote) return;
+
+        // Fill form fields
+        document.getElementById('customer_name').value = quote.customer_name || '';
+        document.getElementById('customer_address').value = quote.customer_address || '';
+        document.getElementById('contact_person').value = quote.contact_person || '';
+        document.getElementById('oggetto').value = quote.oggetto || '';
+        document.getElementById('quote_date').value = quote.quote_date || new Date().toLocaleDateString('it-IT');
+        document.getElementById('quote_number').value = quote.quote_number || '';
+        document.getElementById('final_notes').value = quote.final_notes || '';
+
+        // Fill items
+        clearItemsTable();
+        let items = [];
+        try {
+            if (quote.items_json) {
+                items = typeof quote.items_json === 'string' ? JSON.parse(quote.items_json) : quote.items_json;
+            }
+        } catch (e) {
+            console.error("Errore parsing articoli", e);
+        }
+
+        if (Array.isArray(items) && items.length > 0) {
+            items.forEach(item => {
+                addRow(item.name, item.quantity, item.unit_price, item.vat_percent);
+            });
+        } else {
+            addRow('Sviluppo / Fornitura Articolo', 1, 100, 22);
+        }
+
+        // Switch to "Genera Preventivo" tab
+        const quoteTabBtn = document.getElementById('quote-tab');
+        bootstrap.Tab.getInstance(quoteTabBtn).show();
     }
 
     async function downloadArchivedPdf(quoteId, number) {

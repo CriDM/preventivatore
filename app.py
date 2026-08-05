@@ -244,6 +244,21 @@ async def get_company_logo(company_id: int, db: Session = Depends(get_db)):
     return Response(content=company.logo_data, media_type=media_type)
 
 
+@app.delete("/api/admin/companies/{company_id}")
+async def delete_company(company_id: int, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    company = db.query(Company).filter(Company.id == company_id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Azienda non trovata")
+
+    total_companies = db.query(Company).count()
+    if total_companies <= 1:
+        raise HTTPException(status_code=400, detail="Impossibile eliminare l'unica azienda presente nel sistema")
+
+    db.delete(company)
+    db.commit()
+    return {"status": "success", "message": "Azienda eliminata"}
+
+
 # --- CUSTOMER REGISTRY ---
 @app.get("/api/customers", response_model=List[schemas.CustomerResponse])
 async def list_customers(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -269,6 +284,23 @@ async def create_or_update_customer(payload: schemas.CustomerCreate, user: User 
             contact=payload.contact or ""
         )
         db.add(customer)
+
+    db.commit()
+    db.refresh(customer)
+    return customer
+
+@app.put("/api/customers/{customer_id}", response_model=schemas.CustomerResponse)
+async def update_customer(customer_id: int, payload: schemas.CustomerUpdate, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    customer = db.query(Customer).filter(Customer.id == customer_id, Customer.company_id == user.company_id).first()
+    if not customer:
+        raise HTTPException(status_code=404, detail="Cliente non trovato")
+
+    if payload.name is not None and payload.name.strip():
+        customer.name = payload.name.strip()
+    if payload.address is not None:
+        customer.address = payload.address
+    if payload.contact is not None:
+        customer.contact = payload.contact
 
     db.commit()
     db.refresh(customer)

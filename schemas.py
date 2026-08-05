@@ -81,6 +81,12 @@ class CustomerCreate(CustomerBase):
     pass
 
 
+class CustomerUpdate(BaseModel):
+    name: Optional[str] = None
+    address: Optional[str] = None
+    contact: Optional[str] = None
+
+
 class CustomerResponse(CustomerBase):
     id: int
     company_id: int

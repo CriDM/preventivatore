@@ -40,5 +40,6 @@ dist/
 # Project files
 .pquote.bak
 *.pdf
+*.db
 .env
 

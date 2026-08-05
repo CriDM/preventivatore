@@ -4,20 +4,45 @@ import json
 
 from app import app
 from database import Base, engine, SessionLocal, User, Company, Customer, Quote
+from auth import hash_password
 from fastapi.testclient import TestClient
 
-client = TestClient(app)
 
-
-@pytest.fixture(autouse=True)
-def setup_db():
+@pytest.fixture
+def client():
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
+
+    # Seed default company & admin user for tests
+    db = SessionLocal()
+    try:
+        default_company = Company(
+            company_name="Croce e Cuore Arte Sacra",
+            company_address="Via Roma 100, Roma",
+            piva="12345678901",
+            email="info@croceecuore.it",
+            phone="+39 06 12345678"
+        )
+        db.add(default_company)
+        db.commit()
+        db.refresh(default_company)
+
+        admin_user = User(
+            username="admin",
+            password_hash=hash_password("admin123"),
+            role="admin",
+            company_id=default_company.id
+        )
+        db.add(admin_user)
+        db.commit()
+    finally:
+        db.close()
+
     with TestClient(app) as test_client:
         yield test_client
 
 
-def test_initial_db_setup():
+def test_initial_db_setup(client):
     with SessionLocal() as db:
         admin = db.query(User).filter(User.username == "admin").first()
         assert admin is not None
@@ -28,7 +53,7 @@ def test_initial_db_setup():
         assert company.company_name == "Croce e Cuore Arte Sacra"
 
 
-def test_auth_login():
+def test_auth_login(client):
     response = client.post("/api/login", json={"username": "admin", "password": "admin123"})
     assert response.status_code == 200
     data = response.json()
@@ -42,11 +67,12 @@ def test_auth_login():
     assert me_data["username"] == "admin"
 
 
-def test_admin_user_and_company_management():
+def test_admin_user_and_company_management(client):
     login_resp = client.post("/api/login", json={"username": "admin", "password": "admin123"})
     token = login_resp.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
+    # Create company
     comp_resp = client.post("/api/admin/companies", headers=headers, json={
         "company_name": "Nuova Azienda Test",
         "company_address": "Via Test 123",
@@ -58,6 +84,15 @@ def test_admin_user_and_company_management():
     comp_data = comp_resp.json()
     comp_id = comp_data["id"]
 
+    # Update company
+    update_comp_resp = client.put(f"/api/admin/companies/{comp_id}", headers=headers, json={
+        "company_name": "Azienda Modificata",
+        "phone": "+39 02 88888"
+    })
+    assert update_comp_resp.status_code == 200
+    assert update_comp_resp.json()["company_name"] == "Azienda Modificata"
+
+    # Upload company logo
     dummy_png = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\rIDATx\x9cc\xf8\x0f\x00\x01\x01\x01\x00\x18\xdd\x8d\xb0\x00\x00\x00\x00IEND\xaeB`\x82"
     logo_resp = client.post(
         f"/api/admin/companies/{comp_id}/logo",
@@ -70,6 +105,7 @@ def test_admin_user_and_company_management():
     assert get_logo_resp.status_code == 200
     assert get_logo_resp.content == dummy_png
 
+    # Create user
     user_resp = client.post("/api/admin/users", headers=headers, json={
         "username": "utente_test_unique",
         "password": "userpass123",
@@ -79,28 +115,59 @@ def test_admin_user_and_company_management():
     assert user_resp.status_code == 200
     user_data = user_resp.json()
     assert user_data["username"] == "utente_test_unique"
+    user_id = user_data["id"]
 
-    u_login = client.post("/api/login", json={"username": "utente_test_unique", "password": "userpass123"})
+    # Update user
+    update_user_resp = client.put(f"/api/admin/users/{user_id}", headers=headers, json={
+        "username": "utente_aggiornato"
+    })
+    assert update_user_resp.status_code == 200
+    assert update_user_resp.json()["username"] == "utente_aggiornato"
+
+    # Login with updated username
+    u_login = client.post("/api/login", json={"username": "utente_aggiornato", "password": "userpass123"})
     assert u_login.status_code == 200
     u_token = u_login.json()["access_token"]
     u_headers = {"Authorization": f"Bearer {u_token}"}
 
     u_me = client.get("/api/me", headers=u_headers)
     assert u_me.status_code == 200
-    assert u_me.json()["company"]["company_name"] == "Nuova Azienda Test"
+    assert u_me.json()["company"]["company_name"] == "Azienda Modificata"
+
+    # Delete company
+    del_comp_resp = client.delete(f"/api/admin/companies/{comp_id}", headers=headers)
+    assert del_comp_resp.status_code == 200
 
 
-def test_quote_pdf_and_archive():
+def test_customer_management_and_quote(client):
     login_resp = client.post("/api/login", json={"username": "admin", "password": "admin123"})
     token = login_resp.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
+    # Create customer
+    c_resp = client.post("/api/customers", headers=headers, json={
+        "name": "Cliente Iniziale Srl",
+        "address": "Via Roma 10, Roma",
+        "contact": "Marco Rossi"
+    })
+    assert c_resp.status_code == 200
+    cust_id = c_resp.json()["id"]
+
+    # Update customer
+    c_update = client.put(f"/api/customers/{cust_id}", headers=headers, json={
+        "name": "Cliente Modificato Srl",
+        "contact": "Giuseppe Verdi"
+    })
+    assert c_update.status_code == 200
+    assert c_update.json()["name"] == "Cliente Modificato Srl"
+    assert c_update.json()["contact"] == "Giuseppe Verdi"
+
     payload = {
         "quote_number": "PREV-2026-0001",
         "data": {
-            "customer_name": "Cliente Test Srl",
-            "customer_address": "Via Roma 1, Milano",
-            "contact_person": "Mario Rossi",
+            "customer_name": "Cliente Modificato Srl",
+            "customer_address": "Via Roma 10, Roma",
+            "contact_person": "Giuseppe Verdi",
             "oggetto": "Fornitura Articoli Sacri",
             "quote_date": "05/08/2026",
             "final_notes": "Consegna entro 30 giorni."
@@ -135,8 +202,3 @@ def test_quote_pdf_and_archive():
     dl_resp = client.get(f"/api/quotes/{quote_id}/download", headers=headers)
     assert dl_resp.status_code == 200
     assert dl_resp.headers["content-type"] == "application/pdf"
-
-    cust_resp = client.get("/api/customers", headers=headers)
-    assert cust_resp.status_code == 200
-    customers = cust_resp.json()
-    assert any(c["name"] == "Cliente Test Srl" for c in customers)

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="it" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,89 +9,138 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('theme') || 'system';
+            let effectiveTheme = savedTheme;
+            if (savedTheme === 'system') {
+                effectiveTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            document.documentElement.setAttribute('data-bs-theme', effectiveTheme);
+        })();
+    </script>
+
     <style>
-        :root {
+        :root, [data-bs-theme="light"] {
             --primary: #c41e3a;
-            --primary-dark: #9e152d;
-            --bg-dark: #12141c;
-            --card-bg: #1c1f2e;
-            --card-border: #2a2e45;
-            --text-main: #f1f5f9;
-            --text-muted: #94a3b8;
+            --primary-hover: #a0182e;
+            --bg-page: #f8fafc;
+            --card-bg: #ffffff;
+            --card-border: #e2e8f0;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --input-bg: #ffffff;
+            --input-border: #cbd5e1;
+            --input-color: #0f172a;
+            --table-border: #e2e8f0;
         }
+
+        [data-bs-theme="dark"] {
+            --primary: #e11d48;
+            --primary-hover: #f43f5e;
+            --bg-page: #0f172a;
+            --card-bg: #1e293b;
+            --card-border: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --input-bg: #0f172a;
+            --input-border: #334155;
+            --input-color: #f8fafc;
+            --table-border: #334155;
+        }
+
         body {
             font-family: 'Inter', sans-serif;
-            background-color: var(--bg-dark);
+            background-color: var(--bg-page);
             color: var(--text-main);
             min-height: 100vh;
             margin: 0;
             padding-bottom: 50px;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
+
         .navbar-custom {
             background-color: var(--card-bg);
             border-bottom: 1px solid var(--card-border);
-            padding: 16px 24px;
+            padding: 14px 24px;
         }
+
         .card-custom {
             background-color: var(--card-bg);
             border: 1px solid var(--card-border);
             border-radius: 14px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.06);
             margin-bottom: 24px;
         }
+
+        .card-custom h4, .card-custom h5, .card-custom label {
+            color: var(--text-main) !important;
+        }
+
         .nav-tabs .nav-link {
             color: var(--text-muted);
             border: none;
             padding: 12px 20px;
             font-weight: 500;
-            border-bottom: 2px solid transparent;
+            border-bottom: 3px solid transparent;
         }
+
         .nav-tabs .nav-link.active {
             color: var(--primary);
             background: transparent;
-            border-bottom: 2px solid var(--primary);
+            border-bottom: 3px solid var(--primary);
             font-weight: 600;
         }
+
         .form-control, .form-select {
-            background-color: #161824;
-            border: 1px solid var(--card-border);
-            color: var(--text-main);
+            background-color: var(--input-bg);
+            border: 1px solid var(--input-border);
+            color: var(--input-color);
             border-radius: 8px;
         }
+
         .form-control:focus, .form-select:focus {
-            background-color: #161824;
+            background-color: var(--input-bg);
             border-color: var(--primary);
-            color: var(--text-main);
+            color: var(--input-color);
             box-shadow: 0 0 0 0.25rem rgba(196, 30, 58, 0.25);
         }
-        .table-dark-custom {
+
+        .table-custom {
             color: var(--text-main);
             vertical-align: middle;
         }
-        .table-dark-custom th {
-            border-bottom: 1px solid var(--card-border);
+
+        .table-custom th {
+            border-bottom: 1px solid var(--table-border);
             color: var(--text-muted);
             font-weight: 600;
             font-size: 13px;
             text-transform: uppercase;
         }
-        .table-dark-custom td {
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+
+        .table-custom td {
+            border-bottom: 1px solid var(--table-border);
         }
+
         .badge-role {
             padding: 6px 12px;
             border-radius: 20px;
             font-size: 12px;
             font-weight: 600;
         }
+
         .logo-preview {
-            max-height: 50px;
+            max-height: 48px;
             max-width: 120px;
             object-fit: contain;
-            background: #fff;
+            background: #ffffff;
             padding: 4px;
+            border: 1px solid var(--card-border);
             border-radius: 6px;
         }
+
         .modal-content {
             background-color: var(--card-bg);
             border: 1px solid var(--card-border);
@@ -104,12 +153,24 @@
 <!-- Navbar -->
 <nav class="navbar navbar-expand-lg navbar-custom">
     <div class="container-fluid">
-        <a class="navbar-brand d-flex align-items-center text-white fw-bold" href="/admin">
+        <a class="navbar-brand d-flex align-items-center fw-bold" href="/admin" style="color: var(--text-main);">
             <i class="bi bi-shield-lock-fill text-danger fs-3 me-2"></i>
             Admin Panel - Preventivatore
         </a>
         <div class="d-flex align-items-center gap-3">
-            <a href="/" class="btn btn-outline-light btn-sm">
+            <!-- Theme Selector Dropdown -->
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary btn-sm dropdown-toggle d-flex align-items-center" type="button" id="themeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <span id="themeDropdownLabel"><i class="bi bi-display me-1"></i> Sistema</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="themeDropdown">
+                    <li><button class="dropdown-item d-flex align-items-center" onclick="setTheme('system')"><i class="bi bi-display me-2"></i> Tema di Sistema</button></li>
+                    <li><button class="dropdown-item d-flex align-items-center" onclick="setTheme('light')"><i class="bi bi-sun-fill me-2 text-warning"></i> Chiaro</button></li>
+                    <li><button class="dropdown-item d-flex align-items-center" onclick="setTheme('dark')"><i class="bi bi-moon-stars-fill me-2 text-primary"></i> Scuro</button></li>
+                </ul>
+            </div>
+
+            <a href="/" class="btn btn-outline-primary btn-sm">
                 <i class="bi bi-file-earmark-text me-1"></i> Torna al Preventivatore
             </a>
             <span class="badge bg-danger text-uppercase px-3 py-2" id="usernameBadge">Admin</span>
@@ -150,7 +211,7 @@
                     </div>
 
                     <div class="table-responsive">
-                        <table class="table table-dark-custom">
+                        <table class="table table-custom">
                             <thead>
                                 <tr>
                                     <th>ID</th>
@@ -181,7 +242,7 @@
                     </div>
 
                     <div class="table-responsive">
-                        <table class="table table-dark-custom">
+                        <table class="table table-custom">
                             <thead>
                                 <tr>
                                     <th>ID</th>
@@ -211,7 +272,7 @@
         <div class="modal-content">
             <div class="modal-header border-secondary">
                 <h5 class="modal-title fw-bold">Aggiungi Nuovo Utente</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form onsubmit="handleCreateUser(event)">
                 <div class="modal-body">
@@ -232,14 +293,56 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label text-muted small fw-bold">AZIENDA DI APPARTENENZA</label>
-                        <select id="newCompanyId" class="form-select" required>
+                        <select id="newCompanyId" class="form-select">
                             <!-- Popolato dinamicamente -->
                         </select>
                     </div>
                 </div>
                 <div class="modal-footer border-secondary">
-                    <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Annulla</button>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annulla</button>
                     <button type="submit" class="btn btn-danger">Crea Utente</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: MODIFICA UTENTE -->
+<div class="modal fade" id="editUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title fw-bold">Modifica Utente</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form onsubmit="handleUpdateUser(event)">
+                <input type="hidden" id="editUserId">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">NOME UTENTE</label>
+                        <input type="text" id="editUsername" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">NUOVA PASSWORD (LASCIA VUOTO PER NON CAMBIARE)</label>
+                        <input type="password" id="editPassword" class="form-control" placeholder="••••••••">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">RUOLO</label>
+                        <select id="editRole" class="form-select">
+                            <option value="user">Utente Standard (Genera Preventivi)</option>
+                            <option value="admin">Amministratore (Accesso Completo)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">AZIENDA DI APPARTENENZA</label>
+                        <select id="editCompanyId" class="form-select">
+                            <!-- Popolato dinamicamente -->
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annulla</button>
+                    <button type="submit" class="btn btn-primary">Salva Modifiche</button>
                 </div>
             </form>
         </div>
@@ -252,7 +355,7 @@
         <div class="modal-content">
             <div class="modal-header border-secondary">
                 <h5 class="modal-title fw-bold">Aggiungi Nuova Azienda</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form onsubmit="handleCreateCompany(event)">
                 <div class="modal-body">
@@ -278,8 +381,49 @@
                     </div>
                 </div>
                 <div class="modal-footer border-secondary">
-                    <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Annulla</button>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annulla</button>
                     <button type="submit" class="btn btn-danger">Crea Azienda</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: MODIFICA AZIENDA -->
+<div class="modal fade" id="editCompanyModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title fw-bold">Modifica Dati Azienda</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form onsubmit="handleUpdateCompany(event)">
+                <input type="hidden" id="editCompId">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">RAGIONE SOCIALE</label>
+                        <input type="text" id="editCompName" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">INDIRIZZO COMPLETO</label>
+                        <input type="text" id="editCompAddr" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">PARTITA IVA / CODICE FISCALE</label>
+                        <input type="text" id="editCompPiva" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">EMAIL</label>
+                        <input type="email" id="editCompEmail" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">TELEFONO</label>
+                        <input type="text" id="editCompPhone" class="form-control">
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annulla</button>
+                    <button type="submit" class="btn btn-primary">Salva Modifiche</button>
                 </div>
             </form>
         </div>
@@ -292,7 +436,7 @@
         <div class="modal-content">
             <div class="modal-header border-secondary">
                 <h5 class="modal-title fw-bold">Carica Logo Aziendale</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form onsubmit="handleUploadLogo(event)">
                 <input type="hidden" id="logoCompanyId">
@@ -303,21 +447,55 @@
                     </div>
                 </div>
                 <div class="modal-footer border-secondary">
-                    <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Annulla</button>
-                    <button type="submit" class="btn btn-danger">Salva Logo su Database</button>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annulla</button>
+                    <button type="submit" class="btn btn-danger">Salva Logo</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
     let token = localStorage.getItem('access_token');
     let companiesList = [];
+    let usersList = [];
 
+    // --- THEME MANAGEMENT ---
+    function getSavedTheme() {
+        return localStorage.getItem('theme') || 'system';
+    }
+
+    function applyTheme(theme) {
+        let effectiveTheme = theme;
+        if (theme === 'system') {
+            effectiveTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        document.documentElement.setAttribute('data-bs-theme', effectiveTheme);
+        
+        const btnText = document.getElementById('themeDropdownLabel');
+        if (btnText) {
+            if (theme === 'system') btnText.innerHTML = '<i class="bi bi-display me-1"></i> Sistema';
+            else if (theme === 'light') btnText.innerHTML = '<i class="bi bi-sun-fill me-1 text-warning"></i> Chiaro';
+            else btnText.innerHTML = '<i class="bi bi-moon-stars-fill me-1 text-primary"></i> Scuro';
+        }
+    }
+
+    function setTheme(theme) {
+        localStorage.setItem('theme', theme);
+        applyTheme(theme);
+    }
+
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+        if (getSavedTheme() === 'system') {
+            applyTheme('system');
+        }
+    });
+
+    applyTheme(getSavedTheme());
+
+    // --- AUTH & DATA LOADING ---
     async function checkAuth() {
         if (!token) {
             window.location.href = '/login';
@@ -355,10 +533,13 @@
             companiesList = await res.json();
 
             const tbody = document.getElementById('companiesTableBody');
-            const select = document.getElementById('newCompanyId');
+            const selectNew = document.getElementById('newCompanyId');
+            const selectEdit = document.getElementById('editCompanyId');
             
             tbody.innerHTML = '';
-            select.innerHTML = '<option value="">-- Nessuna --</option>';
+            const defaultOptions = '<option value="">-- Nessuna --</option>';
+            selectNew.innerHTML = defaultOptions;
+            selectEdit.innerHTML = defaultOptions;
 
             if (companiesList.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Nessuna azienda trovata</td></tr>';
@@ -366,7 +547,9 @@
             }
 
             companiesList.forEach(comp => {
-                select.innerHTML += `<option value="${comp.id}">${comp.company_name}</option>`;
+                const opt = `<option value="${comp.id}">${comp.company_name}</option>`;
+                selectNew.innerHTML += opt;
+                selectEdit.innerHTML += opt;
                 
                 const logoHtml = comp.logo_filename 
                     ? `<img src="/api/companies/${comp.id}/logo?t=${Date.now()}" class="logo-preview" alt="Logo">`
@@ -384,8 +567,14 @@
                         </td>
                         <td class="small">${comp.company_address || '-'}</td>
                         <td class="text-end">
-                            <button onclick="openLogoModal(${comp.id})" class="btn btn-sm btn-outline-info me-1" title="Carica Logo">
+                            <button onclick="openLogoModal(${comp.id})" class="btn btn-sm btn-outline-info me-1" title="Carica/Cambia Logo">
                                 <i class="bi bi-image"></i> Logo
+                            </button>
+                            <button onclick="openEditCompanyModal(${comp.id})" class="btn btn-sm btn-outline-primary me-1" title="Modifica Azienda">
+                                <i class="bi bi-pencil-square"></i> Modifica
+                            </button>
+                            <button onclick="deleteCompany(${comp.id})" class="btn btn-sm btn-outline-danger" title="Elimina Azienda">
+                                <i class="bi bi-trash"></i>
                             </button>
                         </td>
                     </tr>
@@ -401,11 +590,11 @@
             const res = await fetch('/api/admin/users', {
                 headers: { 'Authorization': 'Bearer ' + token }
             });
-            const users = await res.json();
+            usersList = await res.json();
             const tbody = document.getElementById('usersTableBody');
             tbody.innerHTML = '';
 
-            users.forEach(user => {
+            usersList.forEach(user => {
                 const roleBadge = user.role === 'admin' 
                     ? '<span class="badge bg-danger badge-role">Amministratore</span>' 
                     : '<span class="badge bg-secondary badge-role">Utente Standard</span>';
@@ -419,6 +608,9 @@
                         <td>${roleBadge}</td>
                         <td>${companyName}</td>
                         <td class="text-end">
+                            <button onclick="openEditUserModal(${user.id})" class="btn btn-sm btn-outline-primary me-1" title="Modifica Utente">
+                                <i class="bi bi-pencil-square"></i>
+                            </button>
                             <button onclick="deleteUser(${user.id})" class="btn btn-sm btn-outline-danger" title="Elimina Utente">
                                 <i class="bi bi-trash"></i>
                             </button>
@@ -431,6 +623,7 @@
         }
     }
 
+    // --- CREATE & EDIT USER ---
     async function handleCreateUser(e) {
         e.preventDefault();
         const username = document.getElementById('newUsername').value;
@@ -460,6 +653,73 @@
         }
     }
 
+    function openEditUserModal(userId) {
+        const user = usersList.find(u => u.id === userId);
+        if (!user) return;
+
+        document.getElementById('editUserId').value = user.id;
+        document.getElementById('editUsername').value = user.username;
+        document.getElementById('editPassword').value = '';
+        document.getElementById('editRole').value = user.role;
+        document.getElementById('editCompanyId').value = user.company_id || '';
+
+        new bootstrap.Modal(document.getElementById('editUserModal')).show();
+    }
+
+    async function handleUpdateUser(e) {
+        e.preventDefault();
+        const userId = document.getElementById('editUserId').value;
+        const payload = {
+            username: document.getElementById('editUsername').value,
+            role: document.getElementById('editRole').value,
+            company_id: document.getElementById('editCompanyId').value ? parseInt(document.getElementById('editCompanyId').value) : null
+        };
+        const pass = document.getElementById('editPassword').value;
+        if (pass) payload.password = pass;
+
+        try {
+            const res = await fetch(`/api/admin/users/${userId}`, {
+                method: 'PUT',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token 
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('editUserModal')).hide();
+                loadUsers();
+            } else {
+                const err = await res.json();
+                alert("Errore: " + (err.detail || "Impossibile aggiornare l'utente"));
+            }
+        } catch (err) {
+            alert("Errore di rete");
+        }
+    }
+
+    async function deleteUser(id) {
+        if (!confirm("Sei sicuro di voler eliminare questo utente?")) return;
+
+        try {
+            const res = await fetch(`/api/admin/users/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+
+            if (res.ok) {
+                loadUsers();
+            } else {
+                const err = await res.json();
+                alert(err.detail || "Errore durante l'eliminazione");
+            }
+        } catch (e) {
+            alert("Errore di rete");
+        }
+    }
+
+    // --- CREATE & EDIT COMPANY ---
     async function handleCreateCompany(e) {
         e.preventDefault();
         const payload = {
@@ -491,6 +751,73 @@
         }
     }
 
+    function openEditCompanyModal(companyId) {
+        const comp = companiesList.find(c => c.id === companyId);
+        if (!comp) return;
+
+        document.getElementById('editCompId').value = comp.id;
+        document.getElementById('editCompName').value = comp.company_name;
+        document.getElementById('editCompAddr').value = comp.company_address || '';
+        document.getElementById('editCompPiva').value = comp.piva || '';
+        document.getElementById('editCompEmail').value = comp.email || '';
+        document.getElementById('editCompPhone').value = comp.phone || '';
+
+        new bootstrap.Modal(document.getElementById('editCompanyModal')).show();
+    }
+
+    async function handleUpdateCompany(e) {
+        e.preventDefault();
+        const companyId = document.getElementById('editCompId').value;
+        const payload = {
+            company_name: document.getElementById('editCompName').value,
+            company_address: document.getElementById('editCompAddr').value,
+            piva: document.getElementById('editCompPiva').value,
+            email: document.getElementById('editCompEmail').value,
+            phone: document.getElementById('editCompPhone').value
+        };
+
+        try {
+            const res = await fetch(`/api/admin/companies/${companyId}`, {
+                method: 'PUT',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token 
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('editCompanyModal')).hide();
+                loadCompanies();
+            } else {
+                alert("Errore durante l'aggiornamento dell'azienda");
+            }
+        } catch (err) {
+            alert("Errore di rete");
+        }
+    }
+
+    async function deleteCompany(id) {
+        if (!confirm("Sei sicuro di voler eliminare questa azienda? Tutti gli utenti associati verranno scollegati.")) return;
+
+        try {
+            const res = await fetch(`/api/admin/companies/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+
+            if (res.ok) {
+                loadCompanies();
+            } else {
+                const err = await res.json();
+                alert(err.detail || "Impossibile eliminare l'azienda");
+            }
+        } catch (e) {
+            alert("Errore di rete");
+        }
+    }
+
+    // --- LOGO UPLOAD ---
     function openLogoModal(companyId) {
         document.getElementById('logoCompanyId').value = companyId;
         new bootstrap.Modal(document.getElementById('uploadLogoModal')).show();
@@ -521,26 +848,6 @@
             }
         } catch (err) {
             alert("Errore durante il caricamento");
-        }
-    }
-
-    async function deleteUser(id) {
-        if (!confirm("Sei sicuro di voler eliminare questo utente?")) return;
-
-        try {
-            const res = await fetch(`/api/admin/users/${id}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': 'Bearer ' + token }
-            });
-
-            if (res.ok) {
-                loadUsers();
-            } else {
-                const err = await res.json();
-                alert(err.detail || "Errore durante l'eliminazione");
-            }
-        } catch (e) {
-            alert("Errore di rete");
         }
     }
 
