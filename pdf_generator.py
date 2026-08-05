@@ -14,10 +14,12 @@ TWOPLACES = Decimal("0.01")
 RED = colors.HexColor("#c41e3a")  # Rosso vivace per intestazioni e totali
 HEADER_BG = colors.HexColor("#f2f2f2")  # Grigio leggero
 
-def _q(value: Decimal) -> Decimal:
+def _q(value) -> Decimal:
+    if not isinstance(value, Decimal):
+        value = Decimal(str(value))
     return value.quantize(TWOPLACES, rounding=ROUND_HALF_UP)
 
-def _eur(value: Decimal) -> str:
+def _eur(value) -> str:
     return f"{_q(value):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 def _build_logo_flowable(logo_path: str):

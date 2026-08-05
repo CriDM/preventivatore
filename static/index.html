@@ -3,119 +3,585 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Preventivatore Web</title>
+    <title>Preventivatore - Croce e Cuore Arte Sacra</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
-        body { background-color: #f8f9fa; padding-top: 20px; }
-        .card { margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        :root {
+            --primary: #c41e3a;
+            --primary-hover: #a0182e;
+            --bg-dark: #0f172a;
+            --card-bg: #1e293b;
+            --card-border: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            margin: 0;
+            padding-bottom: 60px;
+        }
+        .navbar-custom {
+            background-color: var(--card-bg);
+            border-bottom: 1px solid var(--card-border);
+            padding: 14px 24px;
+        }
+        .company-logo-img {
+            max-height: 38px;
+            max-width: 120px;
+            object-fit: contain;
+            background: #fff;
+            padding: 2px 6px;
+            border-radius: 6px;
+        }
+        .card-custom {
+            background-color: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            margin-bottom: 24px;
+        }
+        .card-header-custom {
+            background-color: rgba(255, 255, 255, 0.03);
+            border-bottom: 1px solid var(--card-border);
+            padding: 16px 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .nav-tabs .nav-link {
+            color: var(--text-muted);
+            border: none;
+            padding: 12px 24px;
+            font-weight: 500;
+            font-size: 15px;
+            border-bottom: 3px solid transparent;
+        }
+        .nav-tabs .nav-link.active {
+            color: var(--primary);
+            background: transparent;
+            border-bottom: 3px solid var(--primary);
+            font-weight: 600;
+        }
+        .form-control, .form-select {
+            background-color: #0f172a;
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+            border-radius: 8px;
+            padding: 10px 14px;
+        }
+        .form-control:focus, .form-select:focus {
+            background-color: #0f172a;
+            border-color: var(--primary);
+            color: var(--text-main);
+            box-shadow: 0 0 0 0.25rem rgba(196, 30, 58, 0.25);
+        }
+        .form-control::placeholder {
+            color: #64748b;
+        }
+        .table-custom {
+            color: var(--text-main);
+            vertical-align: middle;
+        }
+        .table-custom th {
+            color: var(--text-muted);
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--card-border);
+        }
+        .table-custom td {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 10px;
+        }
+        .btn-primary-custom {
+            background-color: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            padding: 12px 28px;
+            font-size: 16px;
+            transition: all 0.2s ease;
+        }
+        .btn-primary-custom:hover {
+            background-color: var(--primary-hover);
+            box-shadow: 0 8px 20px rgba(196, 30, 58, 0.4);
+            color: #fff;
+        }
+        .summary-box {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .total-amount {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+        }
     </style>
 </head>
 <body>
-<div class="container">
-    <h1 class="text-center mb-4">Genera Preventivo</h1>
 
-    <div class="row">
-        <!-- Customer Info -->
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header bg-primary text-white">Dati Cliente</div>
-                <div class="card-body">
-                    <input type="text" id="customer_name" class="form-control mb-2" placeholder="Nome Cliente (es. Mario Rossi)" required>
-                    <input type="text" id="customer_address" class="form-control mb-2" placeholder="Indirizzo (es. Via Roma 1, Milano)">
-                    <input type="text" id="contact_person" class="form-control mb-2" placeholder="Referente">
-                    <input type="text" id="oggetto" class="form-control mb-2" placeholder="Oggetto del preventivo">
+<!-- Navbar Header -->
+<nav class="navbar navbar-expand-lg navbar-custom">
+    <div class="container-fluid">
+        <a class="navbar-brand d-flex align-items-center text-white fw-bold" href="/">
+            <div id="companyLogoContainer" class="me-2 d-none">
+                <img id="headerCompanyLogo" class="company-logo-img" alt="Logo">
+            </div>
+            <i id="fallbackLogoIcon" class="bi bi-file-earmark-pdf-fill text-danger fs-3 me-2"></i>
+            <span id="headerCompanyName">Preventivatore</span>
+        </a>
+
+        <div class="d-flex align-items-center gap-3">
+            <span id="adminLinkContainer" class="d-none">
+                <a href="/admin" class="btn btn-outline-warning btn-sm">
+                    <i class="bi bi-shield-lock-fill me-1"></i> Pannello Admin
+                </a>
+            </span>
+            <div class="d-flex align-items-center gap-2 bg-dark px-3 py-1 border border-secondary rounded-pill">
+                <i class="bi bi-person-circle text-muted"></i>
+                <span id="userUsername" class="small fw-semibold">Utente</span>
+            </div>
+            <button onclick="logout()" class="btn btn-sm btn-outline-danger">
+                <i class="bi bi-box-arrow-right"></i>
+            </button>
+        </div>
+    </div>
+</nav>
+
+<div class="container mt-4">
+    <!-- Navigation Tabs -->
+    <ul class="nav nav-tabs mb-4" id="mainTabs" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active" id="quote-tab" data-bs-toggle="tab" data-bs-target="#quote-pane">
+                <i class="bi bi-plus-circle-fill me-2"></i> Genera Preventivo
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" id="customers-tab" data-bs-toggle="tab" data-bs-target="#customers-pane" onclick="loadCustomers()">
+                <i class="bi bi-people-fill me-2"></i> Anagrafica Clienti
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" id="archive-tab" data-bs-toggle="tab" data-bs-target="#archive-pane" onclick="loadQuoteArchive()">
+                <i class="bi bi-archive-fill me-2"></i> Storico Preventivi
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="mainTabsContent">
+        
+        <!-- TAB 1: GENERA PREVENTIVO -->
+        <div class="tab-pane fade show active" id="quote-pane">
+            <div class="row">
+                
+                <!-- Dati Cliente & Oggetto -->
+                <div class="col-lg-6">
+                    <div class="card card-custom">
+                        <div class="card-header-custom">
+                            <span><i class="bi bi-person-vcard text-danger me-2"></i> Dati Cliente</span>
+                            <button type="button" class="btn btn-sm btn-outline-light" onclick="clearCustomerFields()">Pulisci</button>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="mb-3">
+                                <label class="form-label text-muted small fw-bold">SELEZIONA O INSERISCI NOME CLIENTE</label>
+                                <div class="input-group">
+                                    <input type="text" id="customer_name" class="form-control" placeholder="es. Mario Rossi S.r.l." list="customerDatalist" oninput="onCustomerSelect()">
+                                    <datalist id="customerDatalist"></datalist>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-muted small fw-bold">INDIRIZZO CLIENTE</label>
+                                <input type="text" id="customer_address" class="form-control" placeholder="es. Via Milano 45, 20100 Milano">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-muted small fw-bold">REFERENTE / CONTATTO</label>
+                                <input type="text" id="contact_person" class="form-control" placeholder="es. Dott. Marco Bianchi">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dati Preventivo -->
+                <div class="col-lg-6">
+                    <div class="card card-custom">
+                        <div class="card-header-custom">
+                            <span><i class="bi bi-file-earmark-text text-danger me-2"></i> Dati Preventivo</span>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="mb-3">
+                                <label class="form-label text-muted small fw-bold">OGGETTO</label>
+                                <input type="text" id="oggetto" class="form-control" placeholder="es. Fornitura Arredi Sacri e Restauro">
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label text-muted small fw-bold">DATA PREVENTIVO</label>
+                                    <input type="text" id="quote_date" class="form-control" placeholder="es. 05/08/2026">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label text-muted small fw-bold">NUMERO PREVENTIVO (OPZIONALE)</label>
+                                    <input type="text" id="quote_number" class="form-control" placeholder="Auto-generato se vuoto">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Tabella Articoli -->
+            <div class="card card-custom">
+                <div class="card-header-custom">
+                    <span><i class="bi bi-list-stars text-danger me-2"></i> Articoli del Preventivo</span>
+                    <button class="btn btn-sm btn-outline-success" onclick="addRow()">
+                        <i class="bi bi-plus-lg me-1"></i> Aggiungi Riga
+                    </button>
+                </div>
+                <div class="card-body p-4">
+                    <div class="table-responsive">
+                        <table class="table table-custom">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40%;">Descrizione Articolo</th>
+                                    <th style="width: 12%;">Quantità</th>
+                                    <th style="width: 16%;">Prezzo Unitario (€)</th>
+                                    <th style="width: 12%;">IVA %</th>
+                                    <th style="width: 15%; text-align: right;">Totale (€)</th>
+                                    <th style="width: 5%;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="itemsBody">
+                                <!-- Righe inserite dinamicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Summary & Final Notes -->
+                    <div class="row mt-4 align-items-center">
+                        <div class="col-lg-7 mb-3">
+                            <label class="form-label text-muted small fw-bold">NOTE FINALI / CONDIZIONI DI PAGAMENTO</label>
+                            <textarea id="final_notes" class="form-control" rows="3" placeholder="es. Pagamento 30 gg D.F. - Consegna inclusa."></textarea>
+                        </div>
+                        <div class="col-lg-5 mb-3">
+                            <div class="summary-box">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted">Totale Imponibile:</span>
+                                    <span id="summaryImponibile" class="fw-bold">0,00 €</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted">Totale IVA:</span>
+                                    <span id="summaryIva" class="fw-bold">0,00 €</span>
+                                </div>
+                                <hr class="border-secondary my-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="fw-bold">Totale Generale:</span>
+                                    <span id="summaryTotale" class="total-amount">0,00 €</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Generate PDF Button -->
+                    <div class="text-center mt-4">
+                        <button id="generateBtn" onclick="generatePDF()" class="btn btn-primary-custom">
+                            <i class="bi bi-file-earmark-pdf me-2"></i> Genera e Scarica PDF
+                        </button>
+                    </div>
+
                 </div>
             </div>
         </div>
 
-        <!-- Company Info Override -->
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header bg-secondary text-white">I Tuoi Dati (sovrascrive DB se compilati)</div>
-                <div class="card-body">
-                    <input type="text" id="company_name" class="form-control mb-2" placeholder="Nome Tua Azienda">
-                    <input type="text" id="company_address" class="form-control mb-2" placeholder="Tuo Indirizzo">
-                    <input type="text" id="quote_date" class="form-control mb-2" placeholder="Data (es. 04/08/2026)">
+        <!-- TAB 2: ANAGRAFICA CLIENTI -->
+        <div class="tab-pane fade" id="customers-pane">
+            <div class="card card-custom">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h4 class="fw-bold mb-0">Anagrafica Clienti Aziendali</h4>
+                        <div class="w-25">
+                            <input type="text" id="searchCustomerInput" class="form-control" placeholder="Cerca cliente..." onkeyup="filterCustomers()">
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-custom">
+                            <thead>
+                                <tr>
+                                    <th>Nome Cliente</th>
+                                    <th>Indirizzo</th>
+                                    <th>Referente</th>
+                                    <th class="text-end">Azioni</th>
+                                </tr>
+                            </thead>
+                            <tbody id="customersTableBody">
+                                <tr><td colspan="4" class="text-center text-muted">Nessun cliente salvato</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Items -->
-    <div class="card">
-        <div class="card-header bg-success text-white">Articoli</div>
-        <div class="card-body">
-            <table class="table" id="itemsTable">
-                <thead>
-                    <tr>
-                        <th>Descrizione</th>
-                        <th>Quantità</th>
-                        <th>Prezzo Unitario (€)</th>
-                        <th>IVA (%)</th>
-                        <th>Azione</th>
-                    </tr>
-                </thead>
-                <tbody id="itemsBody">
-                    <tr>
-                        <td><input type="text" class="form-control item-name" value="Sviluppo Sito Web"></td>
-                        <td><input type="number" class="form-control item-qty" value="1" min="1"></td>
-                        <td><input type="number" class="form-control item-price" value="1000" step="0.01"></td>
-                        <td><input type="number" class="form-control item-vat" value="22"></td>
-                        <td><button class="btn btn-danger btn-sm" onclick="this.parentElement.parentElement.remove()">X</button></td>
-                    </tr>
-                </tbody>
-            </table>
-            <button class="btn btn-outline-success btn-sm" onclick="addRow()">+ Aggiungi Riga</button>
+        <!-- TAB 3: STORICO PREVENTIVI -->
+        <div class="tab-pane fade" id="archive-pane">
+            <div class="card card-custom">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h4 class="fw-bold mb-0">Storico Preventivi Generati</h4>
+                        <button class="btn btn-outline-light btn-sm" onclick="loadQuoteArchive()">
+                            <i class="bi bi-arrow-clockwise me-1"></i> Aggiorna Storico
+                        </button>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-custom">
+                            <thead>
+                                <tr>
+                                    <th>Numero</th>
+                                    <th>Data</th>
+                                    <th>Cliente</th>
+                                    <th>Oggetto</th>
+                                    <th>Importo Totale</th>
+                                    <th class="text-end">Azioni</th>
+                                </tr>
+                            </thead>
+                            <tbody id="archiveTableBody">
+                                <tr><td colspan="6" class="text-center text-muted">Caricamento storico...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
-    </div>
 
-    <div class="text-center mt-4 mb-5">
-        <button class="btn btn-primary btn-lg" id="generateBtn" onclick="generatePDF()">Genera PDF</button>
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
 <script>
-    function addRow() {
+    let token = localStorage.getItem('access_token');
+    let currentUser = null;
+    let customersList = [];
+
+    async function checkAuth() {
+        if (!token) {
+            window.location.href = '/login';
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/me', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+
+            if (!res.ok) throw new Error("Unauthorized");
+
+            currentUser = await res.json();
+            document.getElementById('userUsername').innerText = currentUser.username;
+
+            if (currentUser.role === 'admin') {
+                document.getElementById('adminLinkContainer').classList.remove('d-none');
+            }
+
+            if (currentUser.company) {
+                document.getElementById('headerCompanyName').innerText = currentUser.company.company_name;
+                if (currentUser.company.logo_filename) {
+                    const logoImg = document.getElementById('headerCompanyLogo');
+                    logoImg.src = `/api/companies/${currentUser.company.id}/logo`;
+                    document.getElementById('companyLogoContainer').classList.remove('d-none');
+                    document.getElementById('fallbackLogoIcon').classList.add('d-none');
+                }
+            }
+
+            // Set default date
+            document.getElementById('quote_date').value = new Date().toLocaleDateString('it-IT');
+
+            // Load initial customer list
+            loadCustomers();
+            
+            // Add default initial row
+            if (document.querySelectorAll('#itemsBody tr').length === 0) {
+                addRow('Sviluppo / Fornitura Articolo', 1, 100, 22);
+            }
+
+        } catch (e) {
+            window.location.href = '/login';
+        }
+    }
+
+    function addRow(name = '', qty = 1, price = 0, vat = 22) {
         const tbody = document.getElementById('itemsBody');
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td><input type="text" class="form-control item-name" placeholder="Descrizione"></td>
-            <td><input type="number" class="form-control item-qty" value="1" min="1"></td>
-            <td><input type="number" class="form-control item-price" value="0" step="0.01"></td>
-            <td><input type="number" class="form-control item-vat" value="22"></td>
-            <td><button class="btn btn-danger btn-sm" onclick="this.parentElement.parentElement.remove()">X</button></td>
+            <td><input type="text" class="form-control item-name" placeholder="Descrizione articolo" value="${name}" oninput="calculateTotals()"></td>
+            <td><input type="number" class="form-control item-qty" value="${qty}" min="1" step="1" oninput="calculateTotals()"></td>
+            <td><input type="number" class="form-control item-price" value="${price}" step="0.01" oninput="calculateTotals()"></td>
+            <td><input type="number" class="form-control item-vat" value="${vat}" step="1" oninput="calculateTotals()"></td>
+            <td class="text-end fw-bold item-row-total">0,00 €</td>
+            <td class="text-end"><button class="btn btn-sm btn-outline-danger" onclick="removeRow(this)"><i class="bi bi-trash"></i></button></td>
         `;
         tbody.appendChild(tr);
+        calculateTotals();
+    }
+
+    function removeRow(btn) {
+        btn.closest('tr').remove();
+        calculateTotals();
+    }
+
+    function calculateTotals() {
+        const rows = document.querySelectorAll('#itemsBody tr');
+        let totalImponibile = 0;
+        let totalIva = 0;
+
+        rows.forEach(row => {
+            const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+            const price = parseFloat(row.querySelector('.item-price').value) || 0;
+            const vat = parseFloat(row.querySelector('.item-vat').value) || 0;
+
+            const rowImponibile = qty * price;
+            const rowIva = rowImponibile * (vat / 100);
+            const rowTotale = rowImponibile + rowIva;
+
+            row.querySelector('.item-row-total').innerText = formatEur(rowTotale);
+
+            totalImponibile += rowImponibile;
+            totalIva += rowIva;
+        });
+
+        const totalGenerale = totalImponibile + totalIva;
+
+        document.getElementById('summaryImponibile').innerText = formatEur(totalImponibile);
+        document.getElementById('summaryIva').innerText = formatEur(totalIva);
+        document.getElementById('summaryTotale').innerText = formatEur(totalGenerale);
+    }
+
+    function formatEur(val) {
+        return val.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+    }
+
+    async function loadCustomers() {
+        try {
+            const res = await fetch('/api/customers', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            customersList = await res.json();
+
+            const datalist = document.getElementById('customerDatalist');
+            datalist.innerHTML = '';
+            customersList.forEach(c => {
+                datalist.innerHTML += `<option value="${c.name}">`;
+            });
+
+            renderCustomersTable(customersList);
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    function onCustomerSelect() {
+        const nameVal = document.getElementById('customer_name').value.trim();
+        const found = customersList.find(c => c.name.toLowerCase() === nameVal.toLowerCase());
+        if (found) {
+            document.getElementById('customer_address').value = found.address || '';
+            document.getElementById('contact_person').value = found.contact || '';
+        }
+    }
+
+    function clearCustomerFields() {
+        document.getElementById('customer_name').value = '';
+        document.getElementById('customer_address').value = '';
+        document.getElementById('contact_person').value = '';
+    }
+
+    function renderCustomersTable(list) {
+        const tbody = document.getElementById('customersTableBody');
+        tbody.innerHTML = '';
+        if (list.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Nessun cliente in anagrafica</td></tr>';
+            return;
+        }
+
+        list.forEach(c => {
+            tbody.innerHTML += `
+                <tr>
+                    <td class="fw-bold">${c.name}</td>
+                    <td>${c.address || '-'}</td>
+                    <td>${c.contact || '-'}</td>
+                    <td class="text-end">
+                        <button onclick="selectCustomerForQuote('${c.name}', '${c.address || ''}', '${c.contact || ''}')" class="btn btn-sm btn-outline-info me-1" title="Usa nel preventivo">
+                            <i class="bi bi-check-lg"></i> Usa
+                        </button>
+                        <button onclick="deleteCustomer(${c.id})" class="btn btn-sm btn-outline-danger" title="Elimina">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+    }
+
+    function selectCustomerForQuote(name, address, contact) {
+        document.getElementById('customer_name').value = name;
+        document.getElementById('customer_address').value = address;
+        document.getElementById('contact_person').value = contact;
+
+        // Switch to quote tab
+        const quoteTabBtn = document.getElementById('quote-tab');
+        bootstrap.Tab.getInstance(quoteTabBtn).show();
+    }
+
+    async function deleteCustomer(id) {
+        if (!confirm("Eliminare questo cliente dall'anagrafica?")) return;
+        try {
+            const res = await fetch(`/api/customers/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            if (res.ok) loadCustomers();
+        } catch (e) {
+            alert("Errore durante l'eliminazione");
+        }
+    }
+
+    function filterCustomers() {
+        const query = document.getElementById('searchCustomerInput').value.toLowerCase();
+        const filtered = customersList.filter(c => 
+            c.name.toLowerCase().includes(query) || 
+            (c.address && c.address.toLowerCase().includes(query))
+        );
+        renderCustomersTable(filtered);
     }
 
     async function generatePDF() {
         const btn = document.getElementById('generateBtn');
         btn.disabled = true;
-        btn.innerText = "Generazione in corso...";
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Generazione in corso...';
 
-        // Collect Auth
-        const auth = prompt("Inserisci la password per accedere all'API:", "Antonio2026");
-        if (!auth) {
-            btn.disabled = false;
-            btn.innerText = "Genera PDF";
-            return;
-        }
-
-        const credentials = btoa("admin:" + auth);
-
-        // Collect Items
         const rows = document.querySelectorAll('#itemsBody tr');
         const items = [];
 
         rows.forEach(row => {
-            const name = row.querySelector('.item-name').value;
+            const name = row.querySelector('.item-name').value.trim();
             const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
             const price = parseFloat(row.querySelector('.item-price').value) || 0;
             const vat = parseFloat(row.querySelector('.item-vat').value) || 0;
 
-            if(name) {
+            if (name) {
                 const total = qty * price;
-                const totalWithVat = total * (1 + (vat/100));
+                const totalWithVat = total * (1 + (vat / 100));
                 items.push({
                     name: name,
                     quantity: qty,
@@ -127,26 +593,32 @@
             }
         });
 
-        // Build Payload
+        if (items.length === 0) {
+            alert("Inserisci almeno un articolo nel preventivo!");
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-file-earmark-pdf me-2"></i> Genera e Scarica PDF';
+            return;
+        }
+
         const payload = {
+            quote_number: document.getElementById('quote_number').value.trim(),
             data: {
-                customer_name: document.getElementById('customer_name').value,
-                customer_address: document.getElementById('customer_address').value,
-                contact_person: document.getElementById('contact_person').value,
-                oggetto: document.getElementById('oggetto').value,
-                company_name: document.getElementById('company_name').value,
-                company_address: document.getElementById('company_address').value,
-                quote_date: document.getElementById('quote_date').value || new Date().toLocaleDateString('it-IT')
+                customer_name: document.getElementById('customer_name').value.trim(),
+                customer_address: document.getElementById('customer_address').value.trim(),
+                contact_person: document.getElementById('contact_person').value.trim(),
+                oggetto: document.getElementById('oggetto').value.trim(),
+                quote_date: document.getElementById('quote_date').value.trim() || new Date().toLocaleDateString('it-IT'),
+                final_notes: document.getElementById('final_notes').value.trim()
             },
             items: items
         };
 
         try {
-            const response = await fetch('/generate-pdf', {
+            const response = await fetch('/api/quotes/generate-pdf', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': 'Basic ' + credentials
+                    'Authorization': 'Bearer ' + token
                 },
                 body: JSON.stringify(payload)
             });
@@ -160,17 +632,103 @@
                 document.body.appendChild(a);
                 a.click();
                 a.remove();
+
+                // Reload customer list & quote archive automatically
+                loadCustomers();
             } else {
-                const err = await response.text();
-                alert("Errore durante la generazione: " + err);
+                const err = await response.json();
+                alert("Errore durante la generazione: " + (err.detail || "Impossibile generare il PDF"));
             }
         } catch (error) {
-            alert("Errore di rete: " + error);
+            alert("Errore di rete durante la generazione del PDF");
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-file-earmark-pdf me-2"></i> Genera e Scarica PDF';
         }
-
-        btn.disabled = false;
-        btn.innerText = "Genera PDF";
     }
+
+    async function loadQuoteArchive() {
+        try {
+            const res = await fetch('/api/quotes', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            const quotes = await res.json();
+            const tbody = document.getElementById('archiveTableBody');
+            tbody.innerHTML = '';
+
+            if (quotes.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Nessun preventivo salvato nello storico</td></tr>';
+                return;
+            }
+
+            quotes.forEach(q => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="fw-bold text-danger">${q.quote_number}</td>
+                        <td>${q.quote_date}</td>
+                        <td>${q.customer_name || '-'}</td>
+                        <td>${q.oggetto || '-'}</td>
+                        <td class="fw-bold">${q.total_amount}</td>
+                        <td class="text-end">
+                            <button onclick="downloadArchivedPdf(${q.id}, '${q.quote_number}')" class="btn btn-sm btn-outline-success me-1" title="Scarica PDF">
+                                <i class="bi bi-download"></i> PDF
+                            </button>
+                            <button onclick="deleteArchivedQuote(${q.id})" class="btn btn-sm btn-outline-danger" title="Elimina dallo storico">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function downloadArchivedPdf(quoteId, number) {
+        try {
+            const response = await fetch(`/api/quotes/${quoteId}/download`, {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+
+            if (response.ok) {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `preventivo_${number}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+            } else {
+                alert("Impossibile scaricare il preventivo");
+            }
+        } catch (e) {
+            alert("Errore di rete");
+        }
+    }
+
+    async function deleteArchivedQuote(quoteId) {
+        if (!confirm("Sei sicuro di voler eliminare questo preventivo dallo storico?")) return;
+        try {
+            const res = await fetch(`/api/quotes/${quoteId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+
+            if (res.ok) loadQuoteArchive();
+        } catch (e) {
+            alert("Errore di rete");
+        }
+    }
+
+    function logout() {
+        localStorage.clear();
+        fetch('/api/logout', { method: 'POST' });
+        window.location.href = '/login';
+    }
+
+    checkAuth();
 </script>
 </body>
 </html>

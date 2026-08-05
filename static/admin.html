@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pannello Amministratore - Preventivatore</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --primary: #c41e3a;
+            --primary-dark: #9e152d;
+            --bg-dark: #12141c;
+            --card-bg: #1c1f2e;
+            --card-border: #2a2e45;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            margin: 0;
+            padding-bottom: 50px;
+        }
+        .navbar-custom {
+            background-color: var(--card-bg);
+            border-bottom: 1px solid var(--card-border);
+            padding: 16px 24px;
+        }
+        .card-custom {
+            background-color: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            margin-bottom: 24px;
+        }
+        .nav-tabs .nav-link {
+            color: var(--text-muted);
+            border: none;
+            padding: 12px 20px;
+            font-weight: 500;
+            border-bottom: 2px solid transparent;
+        }
+        .nav-tabs .nav-link.active {
+            color: var(--primary);
+            background: transparent;
+            border-bottom: 2px solid var(--primary);
+            font-weight: 600;
+        }
+        .form-control, .form-select {
+            background-color: #161824;
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+            border-radius: 8px;
+        }
+        .form-control:focus, .form-select:focus {
+            background-color: #161824;
+            border-color: var(--primary);
+            color: var(--text-main);
+            box-shadow: 0 0 0 0.25rem rgba(196, 30, 58, 0.25);
+        }
+        .table-dark-custom {
+            color: var(--text-main);
+            vertical-align: middle;
+        }
+        .table-dark-custom th {
+            border-bottom: 1px solid var(--card-border);
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 13px;
+            text-transform: uppercase;
+        }
+        .table-dark-custom td {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .badge-role {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .logo-preview {
+            max-height: 50px;
+            max-width: 120px;
+            object-fit: contain;
+            background: #fff;
+            padding: 4px;
+            border-radius: 6px;
+        }
+        .modal-content {
+            background-color: var(--card-bg);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+        }
+    </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-custom">
+    <div class="container-fluid">
+        <a class="navbar-brand d-flex align-items-center text-white fw-bold" href="/admin">
+            <i class="bi bi-shield-lock-fill text-danger fs-3 me-2"></i>
+            Admin Panel - Preventivatore
+        </a>
+        <div class="d-flex align-items-center gap-3">
+            <a href="/" class="btn btn-outline-light btn-sm">
+                <i class="bi bi-file-earmark-text me-1"></i> Torna al Preventivatore
+            </a>
+            <span class="badge bg-danger text-uppercase px-3 py-2" id="usernameBadge">Admin</span>
+            <button onclick="logout()" class="btn btn-sm btn-danger">
+                <i class="bi bi-box-arrow-right me-1"></i> Esci
+            </button>
+        </div>
+    </div>
+</nav>
+
+<div class="container mt-4">
+    <!-- Tabs Header -->
+    <ul class="nav nav-tabs mb-4" id="adminTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="users-tab" data-bs-toggle="tab" data-bs-target="#users-pane" type="button" role="tab">
+                <i class="bi bi-people-fill me-2"></i> Gestione Utenti
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="companies-tab" data-bs-toggle="tab" data-bs-target="#companies-pane" type="button" role="tab">
+                <i class="bi bi-building me-2"></i> Gestione Aziende e Loghi
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tabs Content -->
+    <div class="tab-content" id="adminTabsContent">
+        
+        <!-- USER MANAGEMENT TAB -->
+        <div class="tab-pane fade show active" id="users-pane" role="tabpanel">
+            <div class="card card-custom">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h4 class="fw-bold mb-0">Utenti Registrati</h4>
+                        <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                            <i class="bi bi-person-plus-fill me-1"></i> Nuovo Utente
+                        </button>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-dark-custom">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nome Utente</th>
+                                    <th>Ruolo</th>
+                                    <th>Azienda Associata</th>
+                                    <th class="text-end">Azioni</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody">
+                                <tr><td colspan="5" class="text-center text-muted">Caricamento in corso...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- COMPANY MANAGEMENT TAB -->
+        <div class="tab-pane fade" id="companies-pane" role="tabpanel">
+            <div class="card card-custom">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h4 class="fw-bold mb-0">Aziende e Configurazione Loghi</h4>
+                        <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#addCompanyModal">
+                            <i class="bi bi-building-add me-1"></i> Nuova Azienda
+                        </button>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-dark-custom">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Logo</th>
+                                    <th>Ragione Sociale</th>
+                                    <th>P.IVA</th>
+                                    <th>Email / Telefono</th>
+                                    <th>Indirizzo</th>
+                                    <th class="text-end">Azioni</th>
+                                </tr>
+                            </thead>
+                            <tbody id="companiesTableBody">
+                                <tr><td colspan="7" class="text-center text-muted">Caricamento in corso...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- MODAL: NUOVO UTENTE -->
+<div class="modal fade" id="addUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title fw-bold">Aggiungi Nuovo Utente</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form onsubmit="handleCreateUser(event)">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">NOME UTENTE</label>
+                        <input type="text" id="newUsername" class="form-control" placeholder="es. mario.rossi" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">PASSWORD</label>
+                        <input type="password" id="newPassword" class="form-control" placeholder="••••••••" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">RUOLO</label>
+                        <select id="newRole" class="form-select">
+                            <option value="user" selected>Utente Standard (Genera Preventivi)</option>
+                            <option value="admin">Amministratore (Accesso Completo)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">AZIENDA DI APPARTENENZA</label>
+                        <select id="newCompanyId" class="form-select" required>
+                            <!-- Popolato dinamicamente -->
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Annulla</button>
+                    <button type="submit" class="btn btn-danger">Crea Utente</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: NUOVA AZIENDA -->
+<div class="modal fade" id="addCompanyModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title fw-bold">Aggiungi Nuova Azienda</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form onsubmit="handleCreateCompany(event)">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">RAGIONE SOCIALE</label>
+                        <input type="text" id="newCompName" class="form-control" placeholder="es. Croce e Cuore Arte Sacra" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">INDIRIZZO COMPLETO</label>
+                        <input type="text" id="newCompAddr" class="form-control" placeholder="es. Via Roma 100, 00100 Roma">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">PARTITA IVA / CODICE FISCALE</label>
+                        <input type="text" id="newCompPiva" class="form-control" placeholder="es. 12345678901">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">EMAIL</label>
+                        <input type="email" id="newCompEmail" class="form-control" placeholder="es. info@azienda.it">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">TELEFONO</label>
+                        <input type="text" id="newCompPhone" class="form-control" placeholder="es. +39 06 123456">
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Annulla</button>
+                    <button type="submit" class="btn btn-danger">Crea Azienda</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: UPLOAD LOGO -->
+<div class="modal fade" id="uploadLogoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title fw-bold">Carica Logo Aziendale</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form onsubmit="handleUploadLogo(event)">
+                <input type="hidden" id="logoCompanyId">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">SELEZIONA IMMAGINE (PNG, JPG, SVG)</label>
+                        <input type="file" id="logoFile" class="form-control" accept="image/*" required>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Annulla</button>
+                    <button type="submit" class="btn btn-danger">Salva Logo su Database</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    let token = localStorage.getItem('access_token');
+    let companiesList = [];
+
+    async function checkAuth() {
+        if (!token) {
+            window.location.href = '/login';
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/me', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            if (!res.ok) throw new Error("Unauthorized");
+            const data = await res.json();
+            if (data.role !== 'admin') {
+                alert("Accesso riservato agli amministratori");
+                window.location.href = '/';
+                return;
+            }
+            document.getElementById('usernameBadge').innerText = data.username;
+            loadData();
+        } catch (e) {
+            window.location.href = '/login';
+        }
+    }
+
+    async function loadData() {
+        await loadCompanies();
+        await loadUsers();
+    }
+
+    async function loadCompanies() {
+        try {
+            const res = await fetch('/api/admin/companies', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            companiesList = await res.json();
+
+            const tbody = document.getElementById('companiesTableBody');
+            const select = document.getElementById('newCompanyId');
+            
+            tbody.innerHTML = '';
+            select.innerHTML = '<option value="">-- Nessuna --</option>';
+
+            if (companiesList.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Nessuna azienda trovata</td></tr>';
+                return;
+            }
+
+            companiesList.forEach(comp => {
+                select.innerHTML += `<option value="${comp.id}">${comp.company_name}</option>`;
+                
+                const logoHtml = comp.logo_filename 
+                    ? `<img src="/api/companies/${comp.id}/logo?t=${Date.now()}" class="logo-preview" alt="Logo">`
+                    : '<span class="text-muted small">Nessun Logo</span>';
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${comp.id}</td>
+                        <td>${logoHtml}</td>
+                        <td class="fw-bold">${comp.company_name}</td>
+                        <td>${comp.piva || '-'}</td>
+                        <td>
+                            <div>${comp.email || '-'}</div>
+                            <div class="text-muted small">${comp.phone || ''}</div>
+                        </td>
+                        <td class="small">${comp.company_address || '-'}</td>
+                        <td class="text-end">
+                            <button onclick="openLogoModal(${comp.id})" class="btn btn-sm btn-outline-info me-1" title="Carica Logo">
+                                <i class="bi bi-image"></i> Logo
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function loadUsers() {
+        try {
+            const res = await fetch('/api/admin/users', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            const users = await res.json();
+            const tbody = document.getElementById('usersTableBody');
+            tbody.innerHTML = '';
+
+            users.forEach(user => {
+                const roleBadge = user.role === 'admin' 
+                    ? '<span class="badge bg-danger badge-role">Amministratore</span>' 
+                    : '<span class="badge bg-secondary badge-role">Utente Standard</span>';
+
+                const companyName = user.company ? user.company.company_name : '<span class="text-muted">Nessuna</span>';
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${user.id}</td>
+                        <td class="fw-bold">${user.username}</td>
+                        <td>${roleBadge}</td>
+                        <td>${companyName}</td>
+                        <td class="text-end">
+                            <button onclick="deleteUser(${user.id})" class="btn btn-sm btn-outline-danger" title="Elimina Utente">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function handleCreateUser(e) {
+        e.preventDefault();
+        const username = document.getElementById('newUsername').value;
+        const password = document.getElementById('newPassword').value;
+        const role = document.getElementById('newRole').value;
+        const company_id = document.getElementById('newCompanyId').value || null;
+
+        try {
+            const res = await fetch('/api/admin/users', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token 
+                },
+                body: JSON.stringify({ username, password, role, company_id })
+            });
+
+            if (res.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('addUserModal')).hide();
+                loadUsers();
+            } else {
+                const err = await res.json();
+                alert("Errore: " + (err.detail || "Impossibile creare utente"));
+            }
+        } catch (err) {
+            alert("Errore di rete");
+        }
+    }
+
+    async function handleCreateCompany(e) {
+        e.preventDefault();
+        const payload = {
+            company_name: document.getElementById('newCompName').value,
+            company_address: document.getElementById('newCompAddr').value,
+            piva: document.getElementById('newCompPiva').value,
+            email: document.getElementById('newCompEmail').value,
+            phone: document.getElementById('newCompPhone').value
+        };
+
+        try {
+            const res = await fetch('/api/admin/companies', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token 
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('addCompanyModal')).hide();
+                loadCompanies();
+            } else {
+                alert("Errore durante la creazione dell'azienda");
+            }
+        } catch (err) {
+            alert("Errore di rete");
+        }
+    }
+
+    function openLogoModal(companyId) {
+        document.getElementById('logoCompanyId').value = companyId;
+        new bootstrap.Modal(document.getElementById('uploadLogoModal')).show();
+    }
+
+    async function handleUploadLogo(e) {
+        e.preventDefault();
+        const companyId = document.getElementById('logoCompanyId').value;
+        const fileInput = document.getElementById('logoFile');
+
+        if (!fileInput.files[0]) return;
+
+        const formData = new FormData();
+        formData.append('logo', fileInput.files[0]);
+
+        try {
+            const res = await fetch(`/api/admin/companies/${companyId}/logo`, {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token },
+                body: formData
+            });
+
+            if (res.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('uploadLogoModal')).hide();
+                loadCompanies();
+            } else {
+                alert("Errore nel caricamento del logo");
+            }
+        } catch (err) {
+            alert("Errore durante il caricamento");
+        }
+    }
+
+    async function deleteUser(id) {
+        if (!confirm("Sei sicuro di voler eliminare questo utente?")) return;
+
+        try {
+            const res = await fetch(`/api/admin/users/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+
+            if (res.ok) {
+                loadUsers();
+            } else {
+                const err = await res.json();
+                alert(err.detail || "Errore durante l'eliminazione");
+            }
+        } catch (e) {
+            alert("Errore di rete");
+        }
+    }
+
+    function logout() {
+        localStorage.clear();
+        fetch('/api/logout', { method: 'POST' });
+        window.location.href = '/login';
+    }
+
+    checkAuth();
+</script>
+</body>
+</html>
