@@ -544,30 +544,45 @@
             if (!res.ok) throw new Error("Unauthorized");
 
             currentUser = await res.json();
-            document.getElementById('userUsername').innerText = currentUser.username;
+            if (document.getElementById('userUsername')) {
+                document.getElementById('userUsername').innerText = currentUser.username;
+            }
 
-            if (currentUser.role === 'admin') {
+            if (currentUser.role === 'admin' && document.getElementById('adminLinkContainer')) {
                 document.getElementById('adminLinkContainer').classList.remove('d-none');
             }
 
-            if (currentUser.company) {
-                document.getElementById('headerCompanyName').innerText = currentUser.company.company_name;
-                if (currentUser.company.logo_filename) {
-                    const logoImg = document.getElementById('headerCompanyLogo');
-                    logoImg.src = `/api/companies/${currentUser.company.id}/logo`;
-                    document.getElementById('companyLogoContainer').classList.remove('d-none');
-                    document.getElementById('fallbackLogoIcon').classList.add('d-none');
+            if (currentUser.company && currentUser.company.company_name) {
+                if (document.getElementById('headerCompanyName')) {
+                    document.getElementById('headerCompanyName').innerText = currentUser.company.company_name;
                 }
+                if (currentUser.company.logo_filename && document.getElementById('headerCompanyLogo')) {
+                    const logoImg = document.getElementById('headerCompanyLogo');
+                    logoImg.onerror = function() {
+                        const container = document.getElementById('companyLogoContainer');
+                        if (container) container.classList.add('d-none');
+                    };
+                    logoImg.onload = function() {
+                        const container = document.getElementById('companyLogoContainer');
+                        if (container) container.classList.remove('d-none');
+                    };
+                    logoImg.src = `/api/companies/${currentUser.company.id}/logo`;
+                }
+            } else if (document.getElementById('headerCompanyName')) {
+                document.getElementById('headerCompanyName').innerText = "Preventivatore";
             }
 
             // Set default date
-            document.getElementById('quote_date').value = new Date().toLocaleDateString('it-IT');
+            const dateInput = document.getElementById('quote_date');
+            if (dateInput) {
+                dateInput.value = new Date().toLocaleDateString('it-IT');
+            }
 
             // Load initial customer list
             loadCustomers();
 
-
         } catch (e) {
+            console.error("Auth check error:", e);
             window.location.href = '/login';
         }
     }
