@@ -121,6 +121,7 @@ class QuoteData(BaseModel):
 
 class QuotePayload(BaseModel):
     quote_number: Optional[str] = ""
+    version: Optional[int] = None
     data: QuoteData
     items: List[QuoteItem]
 
@@ -130,6 +131,7 @@ class QuoteResponse(BaseModel):
     company_id: int
     user_id: int
     quote_number: str
+    version: int = 1
     customer_name: str
     customer_address: str
     contact_person: str

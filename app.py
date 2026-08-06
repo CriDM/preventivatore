@@ -367,6 +367,25 @@ async def generate_pdf_endpoint(
         total_amount = sum(item.total_with_vat for item in payload.items)
         total_amount_str = f"{total_amount:,.2f} €".replace(",", "X").replace(".", ",").replace("X", ".")
 
+        # Calculate quote version
+        quote_version = 1
+        if user.company_id and payload.quote_number:
+            existing_quotes = db.query(Quote).filter(
+                Quote.company_id == user.company_id,
+                Quote.quote_number == payload.quote_number
+            ).all()
+            if existing_quotes:
+                if payload.version and payload.version > 1:
+                    quote_version = payload.version
+                else:
+                    max_v = max([getattr(q, 'version', 1) or 1 for q in existing_quotes])
+                    quote_version = max_v + 1
+        elif payload.version:
+            quote_version = payload.version
+
+        data_dict["quote_number"] = payload.quote_number
+        data_dict["version"] = quote_version
+
         # Generate PDF with ReportLab
         pdf_path = generate_quote_pdf(items_dict, data_dict, temp_pdf_path)
 
@@ -388,6 +407,7 @@ async def generate_pdf_endpoint(
                 company_id=user.company_id,
                 user_id=user.id,
                 quote_number=payload.quote_number,
+                version=quote_version,
                 customer_name=payload.data.customer_name or "",
                 customer_address=payload.data.customer_address or "",
                 contact_person=payload.data.contact_person or "",
@@ -412,7 +432,7 @@ async def generate_pdf_endpoint(
                 if temp_logo_path and os.path.exists(temp_logo_path):
                     os.remove(temp_logo_path)
 
-        filename = f"preventivo_{payload.quote_number}.pdf"
+        filename = f"preventivo_{payload.quote_number}_v{quote_version}.pdf"
         return StreamingResponse(
             iterfile(),
             media_type="application/pdf",
@@ -502,6 +522,78 @@ async def download_archived_quote_pdf(
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'}
     )
+
+
+@app.get("/api/quotes/{quote_id}")
+async def get_quote_details(quote_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    quote = db.query(Quote).filter(Quote.id == quote_id).first()
+    if not quote:
+        raise HTTPException(status_code=404, detail="Preventivo non trovato")
+
+    if user.role != "admin" and quote.company_id != user.company_id:
+        raise HTTPException(status_code=403, detail="Accesso negato")
+
+    items = json.loads(quote.items_json) if quote.items_json else []
+    return {
+        "id": quote.id,
+        "company_id": quote.company_id,
+        "user_id": quote.user_id,
+        "quote_number": quote.quote_number,
+        "version": quote.version or 1,
+        "customer_name": quote.customer_name,
+        "customer_address": quote.customer_address,
+        "contact_person": quote.contact_person,
+        "oggetto": quote.oggetto,
+        "quote_date": quote.quote_date,
+        "final_notes": quote.final_notes,
+        "total_amount": quote.total_amount,
+        "items": items,
+        "created_at": quote.created_at
+    }
+
+
+@app.post("/api/quotes/{quote_id}/new-version")
+async def create_new_quote_version(quote_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    original_quote = db.query(Quote).filter(Quote.id == quote_id).first()
+    if not original_quote:
+        raise HTTPException(status_code=404, detail="Preventivo non trovato")
+
+    if user.role != "admin" and original_quote.company_id != user.company_id:
+        raise HTTPException(status_code=403, detail="Accesso negato")
+
+    # Find highest version for this quote_number
+    same_number_quotes = db.query(Quote).filter(
+        Quote.company_id == original_quote.company_id,
+        Quote.quote_number == original_quote.quote_number
+    ).all()
+    max_version = max([q.version or 1 for q in same_number_quotes]) if same_number_quotes else 1
+    new_version = max_version + 1
+
+    new_quote = Quote(
+        company_id=original_quote.company_id,
+        user_id=user.id,
+        quote_number=original_quote.quote_number,
+        version=new_version,
+        customer_name=original_quote.customer_name,
+        customer_address=original_quote.customer_address,
+        contact_person=original_quote.contact_person,
+        oggetto=original_quote.oggetto,
+        quote_date=datetime.now().strftime("%d/%m/%Y"),
+        final_notes=original_quote.final_notes,
+        items_json=original_quote.items_json,
+        total_amount=original_quote.total_amount,
+        created_at=datetime.now().isoformat()
+    )
+    db.add(new_quote)
+    db.commit()
+    db.refresh(new_quote)
+    return {
+        "status": "success",
+        "message": f"Nuova versione v{new_version} creata con successo",
+        "new_quote_id": new_quote.id,
+        "version": new_version,
+        "quote_number": new_quote.quote_number
+    }
 
 
 @app.delete("/api/quotes/{quote_id}")

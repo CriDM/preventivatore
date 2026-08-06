@@ -105,8 +105,16 @@ def generate_quote_pdf(items: List[Dict], data: Dict, output_path: str) -> str:
     story.append(Spacer(1, 12 * mm))
 
     # 2. TITOLO "PREVENTIVO" CENTRATO IN ROSSO CON DATA A DESTRA
+    q_num = data.get("quote_number", "")
+    q_ver = data.get("version", 1)
+    title_text = "PREVENTIVO"
+    if q_num:
+        title_text += f" N. {q_num}"
+    if q_ver and int(q_ver) > 1:
+        title_text += f" (v{q_ver})"
+
     header_table = Table([
-        [Paragraph("PREVENTIVO", title_style), Paragraph(f"Data: {data.get('quote_date', '')}", title_date)]
+        [Paragraph(title_text, title_style), Paragraph(f"Data: {data.get('quote_date', '')}", title_date)]
     ], colWidths=[140 * mm, 40 * mm])
     header_table.setStyle(TableStyle([
         ("VALIGN", (0, 0), (-1, -1), "TOP"),

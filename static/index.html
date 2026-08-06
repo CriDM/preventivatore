@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Preventivatore - Croce e Cuore Arte Sacra</title>
+    <link rel="icon" type="image/png" href="/static/logo.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -196,10 +197,10 @@
 <nav class="navbar navbar-expand-lg navbar-custom">
     <div class="container-fluid">
         <a class="navbar-brand d-flex align-items-center fw-bold" href="/" style="color: var(--text-main);">
+            <img src="/static/logo.png" id="appLogoImg" alt="Preventivatore Logo" style="height: 38px; width: auto; object-fit: contain;" class="me-2">
             <div id="companyLogoContainer" class="me-2 d-none">
-                <img id="headerCompanyLogo" class="company-logo-img" alt="Logo">
+                <img id="headerCompanyLogo" class="company-logo-img" alt="Company Logo" onerror="this.parentElement.classList.add('d-none')">
             </div>
-            <i id="fallbackLogoIcon" class="bi bi-file-earmark-pdf-fill text-danger fs-3 me-2"></i>
             <span id="headerCompanyName">Preventivatore</span>
         </a>
 
@@ -289,7 +290,10 @@
                 <div class="col-lg-6">
                     <div class="card card-custom">
                         <div class="card-header-custom">
-                            <span><i class="bi bi-file-earmark-text text-danger me-2"></i> Dati Preventivo</span>
+                            <span class="d-flex align-items-center">
+                                <i class="bi bi-file-earmark-text text-danger me-2"></i> Dati Preventivo
+                                <span id="currentVersionBadge" class="badge bg-primary ms-2 d-none">v1</span>
+                            </span>
                             <button type="button" class="btn btn-sm btn-outline-secondary" onclick="resetQuoteForm()">Nuovo Preventivo</button>
                         </div>
                         <div class="card-body p-4">
@@ -298,13 +302,17 @@
                                 <input type="text" id="oggetto" class="form-control" placeholder="es. Fornitura Arredi Sacri e Restauro">
                             </div>
                             <div class="row">
-                                <div class="col-md-6 mb-3">
+                                <div class="col-md-4 mb-3">
                                     <label class="form-label text-muted small fw-bold">DATA PREVENTIVO</label>
                                     <input type="text" id="quote_date" class="form-control" placeholder="es. 05/08/2026">
                                 </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label text-muted small fw-bold">NUMERO PREVENTIVO (OPZIONALE)</label>
+                                <div class="col-md-5 mb-3">
+                                    <label class="form-label text-muted small fw-bold">NUMERO PREVENTIVO</label>
                                     <input type="text" id="quote_number" class="form-control" placeholder="Auto-generato se vuoto">
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label text-muted small fw-bold">VERSIONE</label>
+                                    <input type="number" id="quote_version" class="form-control" placeholder="Auto" min="1" step="1">
                                 </div>
                             </div>
                         </div>
@@ -427,6 +435,7 @@
                             <thead>
                                 <tr>
                                     <th>Numero</th>
+                                    <th>Versione</th>
                                     <th>Data</th>
                                     <th>Cliente</th>
                                     <th>Oggetto</th>
@@ -435,7 +444,7 @@
                                 </tr>
                             </thead>
                             <tbody id="archiveTableBody">
-                                <tr><td colspan="6" class="text-center text-muted">Caricamento storico...</td></tr>
+                                <tr><td colspan="7" class="text-center text-muted">Caricamento storico...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -607,6 +616,9 @@
         clearCustomerFields();
         document.getElementById('oggetto').value = '';
         document.getElementById('quote_number').value = '';
+        if (document.getElementById('quote_version')) document.getElementById('quote_version').value = '';
+        const badge = document.getElementById('currentVersionBadge');
+        if (badge) badge.classList.add('d-none');
         document.getElementById('quote_date').value = new Date().toLocaleDateString('it-IT');
         document.getElementById('final_notes').value = '';
         clearItemsTable();
@@ -820,8 +832,10 @@
             return;
         }
 
+        const versionVal = parseInt(document.getElementById('quote_version').value);
         const payload = {
             quote_number: document.getElementById('quote_number').value.trim(),
+            version: isNaN(versionVal) ? null : versionVal,
             data: {
                 customer_name: document.getElementById('customer_name').value.trim(),
                 customer_address: document.getElementById('customer_address').value.trim(),
@@ -878,14 +892,16 @@
             tbody.innerHTML = '';
 
             if (archivedQuotesList.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Nessun preventivo salvato nello storico</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Nessun preventivo salvato nello storico</td></tr>';
                 return;
             }
 
             archivedQuotesList.forEach(q => {
+                const ver = q.version || 1;
                 tbody.innerHTML += `
                     <tr>
                         <td class="fw-bold text-danger">${q.quote_number}</td>
+                        <td><span class="badge bg-primary">v${ver}</span></td>
                         <td>${q.quote_date}</td>
                         <td>${q.customer_name || '-'}</td>
                         <td>${q.oggetto || '-'}</td>
@@ -893,6 +909,9 @@
                         <td class="text-end">
                             <button onclick="loadQuoteForEditing(${q.id})" class="btn btn-sm btn-outline-primary me-1" title="Modifica / Ricarica nel form">
                                 <i class="bi bi-pencil-square"></i> Modifica
+                            </button>
+                            <button onclick="createNewVersionFromArchive(${q.id})" class="btn btn-sm btn-outline-info me-1" title="Crea nuova versione v${ver + 1}">
+                                <i class="bi bi-plus-circle"></i> Nuova Versione
                             </button>
                             <button onclick="downloadArchivedPdf(${q.id}, '${q.quote_number}')" class="btn btn-sm btn-outline-success me-1" title="Scarica PDF">
                                 <i class="bi bi-download"></i> PDF
@@ -909,6 +928,27 @@
         }
     }
 
+    async function createNewVersionFromArchive(quoteId) {
+        try {
+            const res = await fetch(`/api/quotes/${quoteId}/new-version`, {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                await loadQuoteArchive();
+                if (data.new_quote_id) {
+                    loadQuoteForEditing(data.new_quote_id);
+                }
+            } else {
+                const err = await res.json();
+                alert("Errore: " + (err.detail || "Impossibile creare nuova versione"));
+            }
+        } catch (e) {
+            alert("Errore di rete");
+        }
+    }
+
     function loadQuoteForEditing(quoteId) {
         const quote = archivedQuotesList.find(q => q.id === quoteId);
         if (!quote) return;
@@ -920,6 +960,15 @@
         document.getElementById('oggetto').value = quote.oggetto || '';
         document.getElementById('quote_date').value = quote.quote_date || new Date().toLocaleDateString('it-IT');
         document.getElementById('quote_number').value = quote.quote_number || '';
+
+        const ver = quote.version || 1;
+        document.getElementById('quote_version').value = ver;
+        const badge = document.getElementById('currentVersionBadge');
+        if (badge) {
+            badge.innerText = 'v' + ver;
+            badge.classList.remove('d-none');
+        }
+
         document.getElementById('final_notes').value = quote.final_notes || '';
 
         // Fill items

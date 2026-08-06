@@ -199,6 +199,29 @@ def test_customer_management_and_quote(client):
 
     target_quote = next(q for q in quotes if q["quote_number"] == "PREV-2026-0001")
     quote_id = target_quote["id"]
+    assert target_quote["version"] == 1
+
     dl_resp = client.get(f"/api/quotes/{quote_id}/download", headers=headers)
     assert dl_resp.status_code == 200
     assert dl_resp.headers["content-type"] == "application/pdf"
+
+    # Test auto-incrementing version for same quote number
+    pdf_resp_v2 = client.post("/api/quotes/generate-pdf", headers=headers, json=payload)
+    assert pdf_resp_v2.status_code == 200
+
+    archive_resp2 = client.get("/api/quotes", headers=headers)
+    quotes2 = archive_resp2.json()
+    v2_quote = next(q for q in quotes2 if q["quote_number"] == "PREV-2026-0001" and q["version"] == 2)
+    assert v2_quote is not None
+
+    # Test explicit new version endpoint
+    new_ver_resp = client.post(f"/api/quotes/{v2_quote['id']}/new-version", headers=headers)
+    assert new_ver_resp.status_code == 200
+    new_ver_data = new_ver_resp.json()
+    assert new_ver_data["version"] == 3
+
+    # Test GET single quote details endpoint
+    quote_details_resp = client.get(f"/api/quotes/{new_ver_data['new_quote_id']}", headers=headers)
+    assert quote_details_resp.status_code == 200
+    assert quote_details_resp.json()["version"] == 3
+    assert len(quote_details_resp.json()["items"]) == 1
