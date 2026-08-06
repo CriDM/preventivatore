@@ -201,7 +201,7 @@ async def delete_user(user_id: int, admin: User = Depends(require_admin), db: Se
         raise HTTPException(status_code=404, detail="Utente non trovato")
 
     # Reassign user's quotes to admin so DB foreign key constraint doesn't block deletion
-    db.query(Quote).filter(Quote.user_id == user_id).update({"user_id": admin.id})
+    db.query(Quote).filter(Quote.user_id == user_id).update({"user_id": admin.id}, synchronize_session=False)
 
     db.delete(user)
     db.commit()
