@@ -552,24 +552,32 @@
                 document.getElementById('adminLinkContainer').classList.remove('d-none');
             }
 
+            const appLogo = document.getElementById('appLogoImg');
+            const companyLogoContainer = document.getElementById('companyLogoContainer');
+            const companyLogoImg = document.getElementById('headerCompanyLogo');
+            const companyNameSpan = document.getElementById('headerCompanyName');
+
             if (currentUser.company && currentUser.company.company_name) {
-                if (document.getElementById('headerCompanyName')) {
-                    document.getElementById('headerCompanyName').innerText = currentUser.company.company_name;
-                }
-                if (currentUser.company.logo_filename && document.getElementById('headerCompanyLogo')) {
-                    const logoImg = document.getElementById('headerCompanyLogo');
-                    logoImg.onerror = function() {
-                        const container = document.getElementById('companyLogoContainer');
-                        if (container) container.classList.add('d-none');
+                if (companyNameSpan) companyNameSpan.innerText = currentUser.company.company_name;
+
+                if (currentUser.company.logo_filename && companyLogoImg) {
+                    companyLogoImg.onerror = function() {
+                        if (companyLogoContainer) companyLogoContainer.classList.add('d-none');
+                        if (appLogo) appLogo.classList.remove('d-none');
                     };
-                    logoImg.onload = function() {
-                        const container = document.getElementById('companyLogoContainer');
-                        if (container) container.classList.remove('d-none');
+                    companyLogoImg.onload = function() {
+                        if (companyLogoContainer) companyLogoContainer.classList.remove('d-none');
+                        if (appLogo) appLogo.classList.add('d-none');
                     };
-                    logoImg.src = `/api/companies/${currentUser.company.id}/logo`;
+                    companyLogoImg.src = `/api/companies/${currentUser.company.id}/logo?t=${Date.now()}`;
+                } else {
+                    if (companyLogoContainer) companyLogoContainer.classList.add('d-none');
+                    if (appLogo) appLogo.classList.remove('d-none');
                 }
-            } else if (document.getElementById('headerCompanyName')) {
-                document.getElementById('headerCompanyName').innerText = "Preventivatore";
+            } else {
+                if (companyNameSpan) companyNameSpan.innerText = "Preventivatore";
+                if (companyLogoContainer) companyLogoContainer.classList.add('d-none');
+                if (appLogo) appLogo.classList.remove('d-none');
             }
 
             // Set default date
