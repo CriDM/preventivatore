@@ -111,19 +111,15 @@ async def logout(response: Response):
     response.delete_cookie("access_token")
     return {"status": "success", "message": "Logout effettuato"}
 
-@app.get("/api/me")
+@app.get("/api/me", response_model=schemas.UserResponse)
 async def get_me(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    company_data = None
-    if current_user.company:
-        company_data = schemas.CompanyResponse.model_validate(current_user.company)
-    
-    return {
-        "id": current_user.id,
-        "username": current_user.username,
-        "role": current_user.role,
-        "company_id": current_user.company_id,
-        "company": company_data
-    }
+    if not current_user.company_id:
+        default_company = db.query(Company).first()
+        if default_company:
+            current_user.company_id = default_company.id
+            db.commit()
+            db.refresh(current_user)
+    return current_user
 
 
 # --- ADMIN USER MANAGEMENT ---
@@ -138,11 +134,18 @@ async def create_user(payload: schemas.UserCreate, admin: User = Depends(require
     if existing:
         raise HTTPException(status_code=400, detail="Nome utente già in uso")
 
+    target_company_id = payload.company_id
+    if not target_company_id:
+        target_company_id = admin.company_id
+    if not target_company_id:
+        default_c = db.query(Company).first()
+        if default_c: target_company_id = default_c.id
+
     new_user = User(
         username=payload.username.strip(),
         password_hash=hash_password(payload.password),
         role=payload.role,
-        company_id=payload.company_id
+        company_id=target_company_id
     )
     db.add(new_user)
     db.commit()
@@ -452,9 +455,14 @@ async def list_quotes(user: User = Depends(get_current_user), db: Session = Depe
     if user.role == "admin":
         quotes = db.query(Quote).order_by(Quote.id.desc()).all()
     else:
-        if not user.company_id:
+        company_id = user.company_id
+        if not company_id:
+            default_c = db.query(Company).first()
+            company_id = default_c.id if default_c else None
+
+        if not company_id:
             return []
-        quotes = db.query(Quote).filter(Quote.company_id == user.company_id).order_by(Quote.id.desc()).all()
+        quotes = db.query(Quote).filter(Quote.company_id == company_id).order_by(Quote.id.desc()).all()
     return quotes
 
 

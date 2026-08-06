@@ -19,11 +19,11 @@ class TokenResponse(BaseModel):
 
 # --- COMPANY SCHEMAS ---
 class CompanyBase(BaseModel):
-    company_name: str = ""
-    company_address: str = ""
-    piva: str = ""
-    email: str = ""
-    phone: str = ""
+    company_name: Optional[str] = ""
+    company_address: Optional[str] = ""
+    piva: Optional[str] = ""
+    email: Optional[str] = ""
+    phone: Optional[str] = ""
 
 
 class CompanyCreate(CompanyBase):
@@ -72,13 +72,15 @@ class UserResponse(UserBase):
 
 # --- CUSTOMER SCHEMAS ---
 class CustomerBase(BaseModel):
-    name: str
+    name: Optional[str] = ""
     address: Optional[str] = ""
     contact: Optional[str] = ""
 
 
 class CustomerCreate(CustomerBase):
-    pass
+    name: str
+    address: Optional[str] = ""
+    contact: Optional[str] = ""
 
 
 class CustomerUpdate(BaseModel):
@@ -89,7 +91,7 @@ class CustomerUpdate(BaseModel):
 
 class CustomerResponse(CustomerBase):
     id: int
-    company_id: int
+    company_id: Optional[int] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -128,17 +130,17 @@ class QuotePayload(BaseModel):
 
 class QuoteResponse(BaseModel):
     id: int
-    company_id: int
-    user_id: int
-    quote_number: str
-    version: int = 1
-    customer_name: str
-    customer_address: str
-    contact_person: str
-    oggetto: str
-    quote_date: str
-    final_notes: str
-    total_amount: str
-    created_at: str
+    company_id: Optional[int] = None
+    user_id: Optional[int] = None
+    quote_number: Optional[str] = ""
+    version: Optional[int] = 1
+    customer_name: Optional[str] = ""
+    customer_address: Optional[str] = ""
+    contact_person: Optional[str] = ""
+    oggetto: Optional[str] = ""
+    quote_date: Optional[str] = ""
+    final_notes: Optional[str] = ""
+    total_amount: Optional[str] = "0.00"
+    created_at: Optional[str] = ""
 
     model_config = ConfigDict(from_attributes=True)
