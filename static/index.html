@@ -556,11 +556,7 @@
 
             // Load initial customer list
             loadCustomers();
-            
-            // Add default initial row if empty
-            if (document.querySelectorAll('#itemsBody tr').length === 0) {
-                addRow('Sviluppo / Fornitura Articolo', 1, 100, 22);
-            }
+
 
         } catch (e) {
             window.location.href = '/login';
@@ -614,7 +610,6 @@
         document.getElementById('quote_date').value = new Date().toLocaleDateString('it-IT');
         document.getElementById('final_notes').value = '';
         clearItemsTable();
-        addRow('Sviluppo / Fornitura Articolo', 1, 100, 22);
     }
 
     function calculateTotals() {
@@ -942,8 +937,6 @@
             items.forEach(item => {
                 addRow(item.name, item.quantity, item.unit_price, item.vat_percent);
             });
-        } else {
-            addRow('Sviluppo / Fornitura Articolo', 1, 100, 22);
         }
 
         // Switch to "Genera Preventivo" tab
