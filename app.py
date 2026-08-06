@@ -136,7 +136,13 @@ async def list_users(admin: User = Depends(require_admin), db: Session = Depends
 
 @app.post("/api/admin/users", response_model=schemas.UserResponse)
 async def create_user(payload: schemas.UserCreate, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
-    existing = db.query(User).filter(User.username == payload.username.strip()).first()
+    username_clean = payload.username.strip()
+    if not username_clean:
+        raise HTTPException(status_code=400, detail="Il nome utente non può essere vuoto")
+    if not payload.password or not payload.password.strip():
+        raise HTTPException(status_code=400, detail="La password non può essere vuota")
+
+    existing = db.query(User).filter(func.lower(User.username) == username_clean.lower()).first()
     if existing:
         raise HTTPException(status_code=400, detail="Nome utente già in uso")
 
@@ -148,7 +154,7 @@ async def create_user(payload: schemas.UserCreate, admin: User = Depends(require
         if default_c: target_company_id = default_c.id
 
     new_user = User(
-        username=payload.username.strip(),
+        username=username_clean,
         password_hash=hash_password(payload.password),
         role=payload.role,
         company_id=target_company_id
@@ -164,13 +170,15 @@ async def update_user(user_id: int, payload: schemas.UserUpdate, admin: User = D
     if not user:
         raise HTTPException(status_code=404, detail="Utente non trovato")
 
-    if payload.username and payload.username.strip() != user.username:
-        existing = db.query(User).filter(User.username == payload.username.strip()).first()
-        if existing:
-            raise HTTPException(status_code=400, detail="Nome utente già in uso")
-        user.username = payload.username.strip()
+    if payload.username and payload.username.strip():
+        username_clean = payload.username.strip()
+        if username_clean != user.username:
+            existing = db.query(User).filter(func.lower(User.username) == username_clean.lower()).first()
+            if existing:
+                raise HTTPException(status_code=400, detail="Nome utente già in uso")
+            user.username = username_clean
 
-    if payload.password:
+    if payload.password and payload.password.strip():
         user.password_hash = hash_password(payload.password)
 
     if payload.role:
@@ -191,6 +199,9 @@ async def delete_user(user_id: int, admin: User = Depends(require_admin), db: Se
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="Utente non trovato")
+
+    # Reassign user's quotes to admin so DB foreign key constraint doesn't block deletion
+    db.query(Quote).filter(Quote.user_id == user_id).update({"user_id": admin.id})
 
     db.delete(user)
     db.commit()
