@@ -1,7 +1,9 @@
 name: Release (on Tag)
 
-# DISATTIVATO: Esecuzione automatica disabilitata
 on:
+  push:
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 
@@ -10,8 +12,7 @@ permissions:
 
 jobs:
   release:
-    # Explicitly set to windows-2025 to avoid the "redirection" notice
-    runs-on: windows-2025
+    runs-on: windows-latest
 
     steps:
       - uses: actions/checkout@v4

@@ -1,14 +1,15 @@
 name: Build Windows EXE
 
-# DISATTIVATO: Esecuzione automatica disabilitata
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 
 jobs:
   build:
-    # Explicitly using windows-2025 to avoid the redirection notice
-    runs-on: windows-2025
+    runs-on: windows-latest
 
     steps:
       # Updated to v4.2.2+ (verified Node 24 compatibility)
