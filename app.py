@@ -77,10 +77,16 @@ async def admin_page():
     return FileResponse("static/admin.html")
 
 
+from sqlalchemy import func
+
 # --- AUTH ENDPOINTS ---
 @app.post("/api/login", response_model=schemas.TokenResponse)
 async def login(payload: schemas.LoginRequest, response: Response, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.username == payload.username.strip()).first()
+    username_clean = payload.username.strip()
+    user = db.query(User).filter(User.username == username_clean).first()
+    if not user:
+        user = db.query(User).filter(func.lower(User.username) == username_clean.lower()).first()
+
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
