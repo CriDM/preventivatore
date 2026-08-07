@@ -28,17 +28,29 @@ async def lifespan(app: FastAPI):
     db = next(get_db())
     try:
         default_company = db.query(Company).first()
+        logo_file = os.path.join("static", "logo.png")
+        default_logo_bytes = None
+        if os.path.exists(logo_file):
+            with open(logo_file, "rb") as f:
+                default_logo_bytes = f.read()
+
         if not default_company:
             default_company = Company(
                 company_name="Croce e Cuore Arte Sacra",
                 company_address="Via Roma 100, Roma",
                 piva="12345678901",
                 email="info@croceecuore.it",
-                phone="+39 06 12345678"
+                phone="+39 06 12345678",
+                logo_data=default_logo_bytes,
+                logo_filename="logo.png" if default_logo_bytes else None
             )
             db.add(default_company)
             db.commit()
             db.refresh(default_company)
+        elif not default_company.logo_data and default_logo_bytes:
+            default_company.logo_data = default_logo_bytes
+            default_company.logo_filename = "logo.png"
+            db.commit()
 
         admin_user = db.query(User).filter(User.username == "admin").first()
         if not admin_user:
@@ -61,6 +73,18 @@ app = FastAPI(title="Preventivatore API", lifespan=lifespan)
 
 # Mount static files directory
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon_ico():
+    if os.path.exists("static/favicon.ico"):
+        return FileResponse("static/favicon.ico", media_type="image/x-icon")
+    raise HTTPException(status_code=404, detail="Favicon not found")
+
+@app.get("/favicon.png", include_in_schema=False)
+async def favicon_png():
+    if os.path.exists("static/favicon.png"):
+        return FileResponse("static/favicon.png", media_type="image/png")
+    raise HTTPException(status_code=404, detail="Favicon not found")
 
 
 # --- PAGE ROUTES ---
@@ -256,10 +280,15 @@ async def get_company_logo(company_id: int, db: Session = Depends(get_db)):
 
     media_type = "image/png"
     if company.logo_filename:
-        if company.logo_filename.endswith(".jpg") or company.logo_filename.endswith(".jpeg"):
+        fn = company.logo_filename.lower()
+        if fn.endswith(".jpg") or fn.endswith(".jpeg"):
             media_type = "image/jpeg"
-        elif company.logo_filename.endswith(".svg"):
+        elif fn.endswith(".svg"):
             media_type = "image/svg+xml"
+        elif fn.endswith(".ico"):
+            media_type = "image/x-icon"
+        elif fn.endswith(".webp"):
+            media_type = "image/webp"
 
     return Response(content=company.logo_data, media_type=media_type)
 
@@ -441,20 +470,17 @@ async def generate_pdf_endpoint(
             db.add(quote_record)
             db.commit()
 
-        def iterfile():
-            try:
-                with open(pdf_path, mode="rb") as file_like:
-                    while chunk := file_like.read(8192):
-                        yield chunk
-            finally:
-                if os.path.exists(pdf_path):
-                    os.remove(pdf_path)
-                if temp_logo_path and os.path.exists(temp_logo_path):
-                    os.remove(temp_logo_path)
+        with open(pdf_path, mode="rb") as f:
+            pdf_bytes = f.read()
+
+        if os.path.exists(pdf_path):
+            os.remove(pdf_path)
+        if temp_logo_path and os.path.exists(temp_logo_path):
+            os.remove(temp_logo_path)
 
         filename = f"preventivo_{payload.quote_number}_v{quote_version}.pdf"
-        return StreamingResponse(
-            iterfile(),
+        return Response(
+            content=pdf_bytes,
             media_type="application/pdf",
             headers={"Content-Disposition": f'attachment; filename="{filename}"'}
         )
@@ -530,20 +556,17 @@ async def download_archived_quote_pdf(
 
     pdf_path = generate_quote_pdf(items_dict, data_dict, temp_pdf_path)
 
-    def iterfile():
-        try:
-            with open(pdf_path, mode="rb") as file_like:
-                while chunk := file_like.read(8192):
-                    yield chunk
-        finally:
-            if os.path.exists(pdf_path):
-                os.remove(pdf_path)
-            if temp_logo_path and os.path.exists(temp_logo_path):
-                os.remove(temp_logo_path)
+    with open(pdf_path, mode="rb") as f:
+        pdf_bytes = f.read()
+
+    if os.path.exists(pdf_path):
+        os.remove(pdf_path)
+    if temp_logo_path and os.path.exists(temp_logo_path):
+        os.remove(temp_logo_path)
 
     filename = f"preventivo_{quote.quote_number}.pdf"
-    return StreamingResponse(
-        iterfile(),
+    return Response(
+        content=pdf_bytes,
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'}
     )

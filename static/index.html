@@ -4,7 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Preventivatore - Croce e Cuore Arte Sacra</title>
-    <link rel="icon" type="image/png" href="/static/logo.png">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -73,12 +76,16 @@
 
         .company-logo-img {
             max-height: 38px;
-            max-width: 120px;
+            max-width: 140px;
             object-fit: contain;
-            background: #ffffff;
-            padding: 2px 6px;
             border-radius: 6px;
-            border: 1px solid var(--card-border);
+        }
+
+        .app-logo-img {
+            height: 36px;
+            width: 36px;
+            object-fit: contain;
+            border-radius: 8px;
         }
 
         .card-custom {
@@ -196,12 +203,12 @@
 <!-- Navbar Header -->
 <nav class="navbar navbar-expand-lg navbar-custom">
     <div class="container-fluid">
-        <a class="navbar-brand d-flex align-items-center fw-bold" href="/" style="color: var(--text-main);">
-            <img src="/static/logo.png" id="appLogoImg" alt="Preventivatore Logo" style="height: 38px; width: auto; object-fit: contain;" class="me-2">
-            <div id="companyLogoContainer" class="me-2 d-none">
-                <img id="headerCompanyLogo" class="company-logo-img" alt="Company Logo" onerror="this.parentElement.classList.add('d-none')">
+        <a class="navbar-brand d-flex align-items-center fw-bold gap-2" href="/" style="color: var(--text-main);">
+            <img src="/static/logo.png" id="appLogoImg" alt="Logo" class="app-logo-img">
+            <div id="companyLogoContainer" class="d-none">
+                <img id="headerCompanyLogo" class="company-logo-img" alt="Company Logo" onerror="this.parentElement.classList.add('d-none'); document.getElementById('appLogoImg').classList.remove('d-none');">
             </div>
-            <span id="headerCompanyName">Preventivatore</span>
+            <span id="headerCompanyName" class="fs-6 fw-semibold">Preventivatore</span>
         </a>
 
         <div class="d-flex align-items-center gap-3">
