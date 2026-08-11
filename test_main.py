@@ -1,22 +1,13 @@
 import sys
 from unittest.mock import MagicMock
 
-# Mock tkinter and other GUI related imports that might fail in headless environment
-sys.modules["tkinter"] = MagicMock()
-sys.modules["tkinter.filedialog"] = MagicMock()
-sys.modules["tkinter.messagebox"] = MagicMock()
-sys.modules["tkinter.ttk"] = MagicMock()
-sys.modules["customtkinter"] = MagicMock()
-sys.modules["reportlab"] = MagicMock()
-sys.modules["reportlab.lib"] = MagicMock()
-sys.modules["reportlab.lib.colors"] = MagicMock()
-sys.modules["reportlab.lib.pagesizes"] = MagicMock()
-sys.modules["reportlab.lib.styles"] = MagicMock()
-sys.modules["reportlab.lib.enums"] = MagicMock()
-sys.modules["reportlab.lib.units"] = MagicMock()
-sys.modules["reportlab.platypus"] = MagicMock()
-sys.modules["svglib"] = MagicMock()
-sys.modules["svglib.svglib"] = MagicMock()
+gui_modules = [
+    "tkinter", "tkinter.filedialog", "tkinter.messagebox", "tkinter.ttk",
+    "customtkinter"
+]
+for m in gui_modules:
+    if m not in sys.modules:
+        sys.modules[m] = MagicMock()
 
 from decimal import Decimal
 from main import format_decimal

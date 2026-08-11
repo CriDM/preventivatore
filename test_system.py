@@ -3,15 +3,16 @@ import os
 import json
 
 from app import app
-from database import Base, engine, SessionLocal, User, Company, Customer, Quote
+from database import Base, engine, SessionLocal, User, Company, Customer, Quote, run_migrations
 from auth import hash_password
 from fastapi.testclient import TestClient
+from sqlalchemy import text, inspect
 
 
 @pytest.fixture
 def client():
     Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
+    run_migrations()
 
     # Seed default company & admin user for tests
     db = SessionLocal()
@@ -51,6 +52,42 @@ def test_initial_db_setup(client):
         company = db.query(Company).first()
         assert company is not None
         assert company.company_name == "Croce e Cuore Arte Sacra"
+
+
+def test_auto_migration_missing_columns(client):
+    # Simulate an old schema by dropping quotes table and creating it without 'version' column
+    with engine.begin() as conn:
+        conn.execute(text("DROP TABLE IF EXISTS quotes"))
+        conn.execute(text("""
+            CREATE TABLE quotes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                company_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                quote_number VARCHAR NOT NULL,
+                customer_name VARCHAR DEFAULT '',
+                customer_address VARCHAR DEFAULT '',
+                contact_person VARCHAR DEFAULT '',
+                oggetto VARCHAR DEFAULT '',
+                quote_date VARCHAR DEFAULT '',
+                final_notes TEXT DEFAULT '',
+                items_json TEXT DEFAULT '[]',
+                total_amount VARCHAR DEFAULT '0.00',
+                created_at VARCHAR DEFAULT ''
+            )
+        """))
+    
+    # Confirm version column is missing
+    inspector = inspect(engine)
+    cols = [c["name"] for c in inspector.get_columns("quotes")]
+    assert "version" not in cols
+
+    # Run auto migration
+    run_migrations()
+
+    # Confirm version column now exists
+    inspector = inspect(engine)
+    cols_after = [c["name"] for c in inspector.get_columns("quotes")]
+    assert "version" in cols_after
 
 
 def test_auth_login(client):

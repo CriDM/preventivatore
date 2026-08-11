@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from sqlalchemy import create_engine, Column, Integer, String, LargeBinary, Text, ForeignKey
+from sqlalchemy import create_engine, Column, Integer, String, LargeBinary, Text, ForeignKey, inspect, text
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -87,9 +87,39 @@ class Quote(Base):
     user = relationship("User", back_populates="quotes")
 
 
+def run_migrations():
+    # 1. Create DB tables if not exist
+    Base.metadata.create_all(bind=engine)
+
+    # 2. Check and add missing columns to existing tables
+    inspector = inspect(engine)
+    with engine.begin() as conn:
+        for table_name, table in Base.metadata.tables.items():
+            if inspector.has_table(table_name):
+                existing_cols = {c["name"] for c in inspector.get_columns(table_name)}
+                for column in table.columns:
+                    if column.name not in existing_cols:
+                        col_type = column.type.compile(engine.dialect)
+                        default_clause = ""
+                        if column.name == "version":
+                            default_clause = " DEFAULT 1"
+                        elif column.default is not None and column.default.is_scalar:
+                            val = column.default.arg
+                            if isinstance(val, str):
+                                default_clause = f" DEFAULT '{val}'"
+                            elif isinstance(val, (int, float, bool)):
+                                default_clause = f" DEFAULT {val}"
+
+                        sql = f"ALTER TABLE {table_name} ADD COLUMN {column.name} {col_type}{default_clause}"
+                        conn.execute(text(sql))
+                        if table_name == "quotes" and column.name == "version":
+                            conn.execute(text("UPDATE quotes SET version = 1 WHERE version IS NULL"))
+
+
 def get_db():
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
+

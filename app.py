@@ -13,7 +13,7 @@ from fastapi.security import HTTPBearer
 from contextlib import asynccontextmanager
 from sqlalchemy.orm import Session
 
-from database import Base, engine, get_db, Company, User, Customer, Quote
+from database import Base, engine, get_db, run_migrations, Company, User, Customer, Quote
 from auth import hash_password, verify_password, create_access_token, get_current_user, require_admin
 import schemas
 from pdf_generator import generate_quote_pdf
@@ -21,8 +21,8 @@ from pdf_generator import generate_quote_pdf
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 1. Create DB tables
-    Base.metadata.create_all(bind=engine)
+    # 1. Create DB tables and run migrations
+    run_migrations()
 
     # 2. Ensure initial default company & admin user exist
     db = next(get_db())
