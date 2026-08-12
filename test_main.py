@@ -67,3 +67,11 @@ def test_generate_quote_pdf_with_and_without_vat(tmp_path):
 
     assert pdf1.exists() and pdf1.stat().st_size > 0
     assert pdf2.exists() and pdf2.stat().st_size > 0
+
+    try:
+        import pypdf
+        reader2 = pypdf.PdfReader(str(pdf2))
+        text2 = reader2.pages[0].extract_text()
+        assert "200,00" in text2
+    except ImportError:
+        pass

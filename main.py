@@ -738,10 +738,21 @@ del "%~f0"
             return
         self.woo_name_map = {p["name"].strip(): p for p in self.woo_products if p.get("name") and p["name"].strip()}
     def _on_vat_toggle(self) -> None:
+        if hasattr(self, 'tree'):
+            if self.show_vat_var.get():
+                self.tree["displaycolumns"] = ("name", "unit_price", "quantity", "total", "vat", "total_with_vat")
+                self.tree.heading("total", text="Importo Tot")
+            else:
+                self.tree["displaycolumns"] = ("name", "unit_price", "quantity", "total")
+                self.tree.heading("total", text="Totale")
+        self._refresh_summary()
+
+    def _refresh_summary(self) -> None:
         if self.show_vat_var.get():
-            self.tree["displaycolumns"] = ("name", "unit_price", "quantity", "total", "vat", "total_with_vat")
+            generale = q(sum((item["total_with_vat"] for item in self.items), Decimal("0")))
         else:
-            self.tree["displaycolumns"] = ("name", "unit_price", "quantity", "total_with_vat")
+            generale = q(sum((item["total"] for item in self.items), Decimal("0")))
+        self.summary_var.set(f"Totale Generale: € {format_decimal(generale)}")
 
     def _build_table(self) -> None:
         frame_container = ctk.CTkFrame(self.root)

@@ -372,11 +372,11 @@
                         </div>
                         <div class="col-lg-5 mb-3">
                             <div class="summary-box">
-                                <div class="d-flex justify-content-between mb-2">
+                                <div class="d-flex justify-content-between mb-2" id="summaryImponibileRow">
                                     <span class="text-muted">Totale Imponibile:</span>
                                     <span id="summaryImponibile" class="fw-bold">0,00 €</span>
                                 </div>
-                                <div class="d-flex justify-content-between mb-2">
+                                <div class="d-flex justify-content-between mb-2" id="summaryIvaRow">
                                     <span class="text-muted">Totale IVA:</span>
                                     <span id="summaryIva" class="fw-bold">0,00 €</span>
                                 </div>
@@ -612,6 +612,11 @@
         document.querySelectorAll('.vat-col').forEach(el => {
             el.style.display = show ? '' : 'none';
         });
+        const summaryImpRow = document.getElementById('summaryImponibileRow');
+        const summaryIvaRow = document.getElementById('summaryIvaRow');
+        if (summaryImpRow) summaryImpRow.style.display = show ? 'flex' : 'none';
+        if (summaryIvaRow) summaryIvaRow.style.display = show ? 'flex' : 'none';
+        calculateTotals();
     }
 
     function addRow(name = '', qty = 1, price = 0, vat = 22) {
@@ -667,6 +672,7 @@
     }
 
     function calculateTotals() {
+        const showVat = document.getElementById('showVatCheckbox') ? document.getElementById('showVatCheckbox').checked : true;
         const rows = document.querySelectorAll('#itemsBody tr');
         let totalImponibile = 0;
         let totalIva = 0;
@@ -674,7 +680,7 @@
         rows.forEach(row => {
             const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
             const price = parseFloat(row.querySelector('.item-price').value) || 0;
-            const vat = parseFloat(row.querySelector('.item-vat').value) || 0;
+            const vat = showVat ? (parseFloat(row.querySelector('.item-vat').value) || 0) : 0;
 
             const rowImponibile = qty * price;
             const rowIva = rowImponibile * (vat / 100);
@@ -847,15 +853,16 @@
         const rows = document.querySelectorAll('#itemsBody tr');
         const items = [];
 
+        const showVat = document.getElementById('showVatCheckbox').checked;
         rows.forEach(row => {
             const name = row.querySelector('.item-name').value.trim();
             const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
             const price = parseFloat(row.querySelector('.item-price').value) || 0;
-            const vat = parseFloat(row.querySelector('.item-vat').value) || 0;
+            const vat = showVat ? (parseFloat(row.querySelector('.item-vat').value) || 0) : 0;
 
             if (name) {
                 const total = qty * price;
-                const totalWithVat = total * (1 + (vat / 100));
+                const totalWithVat = showVat ? total * (1 + (vat / 100)) : total;
                 items.push({
                     name: name,
                     quantity: qty,

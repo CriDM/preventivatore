@@ -195,8 +195,12 @@ def generate_quote_pdf(items: List[Dict], data: Dict, output_path: str) -> str:
         vat_percent = _q(item.get("vat_percent", 0))
         total_with_vat = _q(item.get("total_with_vat", total))
 
-        totale_generale += total_with_vat
-        totale_imponibile += total
+        if show_vat:
+            totale_generale += total_with_vat
+            totale_imponibile += total
+        else:
+            totale_generale += total
+            totale_imponibile += total
         
         # Formattazione quantità senza decimali se è intero
         qty_str = f"{int(quantity)}" if quantity % 1 == 0 else _eur(quantity)
@@ -215,7 +219,7 @@ def generate_quote_pdf(items: List[Dict], data: Dict, output_path: str) -> str:
                 item["name"],
                 qty_str,
                 _eur(unit_price),
-                _eur(total_with_vat),
+                _eur(total),
             ])
         row_index += 1
 
