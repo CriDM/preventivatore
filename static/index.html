@@ -389,9 +389,12 @@
                         </div>
                     </div>
 
-                    <!-- Generate PDF Button -->
-                    <div class="text-center mt-4">
-                        <button id="generateBtn" onclick="generatePDF()" class="btn btn-primary-custom">
+                    <!-- Generate & Preview PDF Buttons -->
+                    <div class="d-flex justify-content-center gap-3 mt-4">
+                        <button id="previewBtn" onclick="generatePDF(true)" class="btn btn-outline-primary px-4">
+                            <i class="bi bi-eye me-2"></i> Visualizza Anteprima PDF
+                        </button>
+                        <button id="generateBtn" onclick="generatePDF(false)" class="btn btn-primary-custom px-4">
                             <i class="bi bi-file-earmark-pdf me-2"></i> Genera e Scarica PDF
                         </button>
                     </div>
@@ -844,11 +847,12 @@
         renderCustomersTable(filtered);
     }
 
-    // --- GENERATE PDF ---
-    async function generatePDF() {
-        const btn = document.getElementById('generateBtn');
+    // --- GENERATE / PREVIEW PDF ---
+    async function generatePDF(preview = false) {
+        const btn = preview ? document.getElementById('previewBtn') : document.getElementById('generateBtn');
+        const origHtml = btn.innerHTML;
         btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Generazione in corso...';
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Generazione...';
 
         const rows = document.querySelectorAll('#itemsBody tr');
         const items = [];
@@ -877,7 +881,7 @@
         if (items.length === 0) {
             alert("Inserisci almeno un articolo nel preventivo!");
             btn.disabled = false;
-            btn.innerHTML = '<i class="bi bi-file-earmark-pdf me-2"></i> Genera e Scarica PDF';
+            btn.innerHTML = origHtml;
             return;
         }
 
@@ -910,12 +914,16 @@
             if (response.ok) {
                 const blob = await response.blob();
                 const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'preventivo.pdf';
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
+                if (preview) {
+                    window.open(url, '_blank');
+                } else {
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `preventivo_${payload.quote_number || 'pdf'}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                }
 
                 // Reload customer list & quote archive automatically
                 loadCustomers();
@@ -927,7 +935,7 @@
             alert("Errore di rete durante la generazione del PDF");
         } finally {
             btn.disabled = false;
-            btn.innerHTML = '<i class="bi bi-file-earmark-pdf me-2"></i> Genera e Scarica PDF';
+            btn.innerHTML = origHtml;
         }
     }
 
@@ -962,6 +970,9 @@
                             </button>
                             <button onclick="createNewVersionFromArchive(${q.id})" class="btn btn-sm btn-outline-info me-1" title="Crea nuova versione v${ver + 1}">
                                 <i class="bi bi-plus-circle"></i> Nuova Versione
+                            </button>
+                            <button onclick="previewArchivedPdf(${q.id})" class="btn btn-sm btn-outline-secondary me-1" title="Anteprima PDF nel browser">
+                                <i class="bi bi-eye"></i> Anteprima
                             </button>
                             <button onclick="downloadArchivedPdf(${q.id}, '${q.quote_number}')" class="btn btn-sm btn-outline-success me-1" title="Scarica PDF">
                                 <i class="bi bi-download"></i> PDF
@@ -1055,6 +1066,24 @@
         } catch (e) {
             console.error("Errore durante il caricamento del preventivo:", e);
             alert("Errore di rete durante il caricamento del preventivo");
+        }
+    }
+
+    async function previewArchivedPdf(quoteId) {
+        try {
+            const response = await fetch(`/api/quotes/${quoteId}/download`, {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+
+            if (response.ok) {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                window.open(url, '_blank');
+            } else {
+                alert("Impossibile aprire l'anteprima del preventivo");
+            }
+        } catch (e) {
+            alert("Errore di rete");
         }
     }
 
