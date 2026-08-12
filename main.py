@@ -59,6 +59,8 @@ class PreventivoApp:
 
         self.settings = self._load_settings()
         self.woo_products = storage.load_woo_products()
+        self.show_vat_var = tk.BooleanVar(value=self.settings.get("show_vat", True))
+        self.show_vat_var.trace_add("write", self._save_draft)
 
         self._build_header()
         
@@ -94,6 +96,7 @@ class PreventivoApp:
                 "quote_date": self.quote_date_var.get(),
                 "notes": self.final_notes_var.get(),
             },
+            "show_vat": self.show_vat_var.get(),
             "items": self._serialize_items()
         }
         try:
@@ -239,6 +242,9 @@ del "%~f0"
                     self.oggetto_var.set(cust.get("oggetto", ""))
                     self.quote_date_var.set(cust.get("quote_date", ""))
                     self.final_notes_var.set(cust.get("notes", ""))
+                    if "show_vat" in payload:
+                        self.show_vat_var.set(bool(payload["show_vat"]))
+                        self._on_vat_toggle()
 
                     # Reset items
                     self.items = []
@@ -731,11 +737,28 @@ del "%~f0"
         if not hasattr(self, 'desc_entry'):
             return
         self.woo_name_map = {p["name"].strip(): p for p in self.woo_products if p.get("name") and p["name"].strip()}
+    def _on_vat_toggle(self) -> None:
+        if self.show_vat_var.get():
+            self.tree["displaycolumns"] = ("name", "unit_price", "quantity", "total", "vat", "total_with_vat")
+        else:
+            self.tree["displaycolumns"] = ("name", "unit_price", "quantity", "total_with_vat")
+
     def _build_table(self) -> None:
         frame_container = ctk.CTkFrame(self.root)
         frame_container.pack(fill="both", expand=True, padx=12, pady=8)
 
-        ctk.CTkLabel(frame_container, text="Articoli Inseriti", font=ctk.CTkFont(family="Helvetica", size=14, weight="bold")).pack(anchor="w", padx=12, pady=(8,0))
+        table_header_frame = ctk.CTkFrame(frame_container, fg_color="transparent")
+        table_header_frame.pack(fill="x", padx=12, pady=(8, 0))
+
+        ctk.CTkLabel(table_header_frame, text="Articoli Inseriti", font=ctk.CTkFont(family="Helvetica", size=14, weight="bold")).pack(side="left")
+
+        self.show_vat_cb = ctk.CTkCheckBox(
+            table_header_frame,
+            text="Mostra colonna IVA (in tabella e in stampa)",
+            variable=self.show_vat_var,
+            command=self._on_vat_toggle
+        )
+        self.show_vat_cb.pack(side="right")
 
         frame = ctk.CTkFrame(frame_container, fg_color="transparent")
         # expand=True permette alla tabella di occupare lo spazio rimanente, ma non spingerà fuori i bottoni già pacchettizzati
@@ -757,6 +780,8 @@ del "%~f0"
         self.tree.column("total", width=100, anchor="e", stretch=tk.NO)
         self.tree.column("vat", width=80, anchor="center", stretch=tk.NO)
         self.tree.column("total_with_vat", width=100, anchor="e", stretch=tk.NO)
+
+        self._on_vat_toggle()
 
         yscroll = ttk.Scrollbar(frame, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=yscroll.set)
@@ -962,6 +987,8 @@ del "%~f0"
         self.contact_person_var.set("")
         self.oggetto_var.set("")
         self.final_notes_var.set("")
+        self.show_vat_var.set(True)
+        self._on_vat_toggle()
         self.items.clear()
         self.tree.delete(*self.tree.get_children())
         self._refresh_summary()
@@ -990,6 +1017,7 @@ del "%~f0"
                 "quote_date": self.quote_date_var.get(),
                 "notes": self.final_notes_var.get(),
             },
+            "show_vat": self.show_vat_var.get(),
             "items": self._serialize_items()
         }
         with open(path, "w", encoding="utf-8") as fp:
@@ -1042,6 +1070,8 @@ del "%~f0"
         self.oggetto_var.set(cust.get("oggetto", ""))
         self.quote_date_var.set(cust.get("quote_date", str(datetime.date.today().strftime("%d/%m/%Y"))))
         self.final_notes_var.set(cust.get("notes", ""))
+        self.show_vat_var.set(bool(payload.get("show_vat", True)))
+        self._on_vat_toggle()
 
         self.items = []
         self.tree.delete(*self.tree.get_children())
@@ -1071,6 +1101,8 @@ del "%~f0"
         self.oggetto_var.set(cust.get("oggetto", ""))
         self.quote_date_var.set(cust.get("quote_date", str(date.today().strftime("%d/%m/%Y"))))
         self.final_notes_var.set(cust.get("notes", ""))
+        self.show_vat_var.set(bool(payload.get("show_vat", True)))
+        self._on_vat_toggle()
 
         self.items = []
         self.tree.delete(*self.tree.get_children())
@@ -1104,6 +1136,7 @@ del "%~f0"
             "contact_person": self.contact_person_var.get(),
             "oggetto": self.oggetto_var.get(),
             "final_notes": self.final_notes_var.get(),
+            "show_vat": self.show_vat_var.get(),
         }
 
     def preview_pdf(self) -> None:

@@ -119,6 +119,7 @@ class QuoteData(BaseModel):
     contact_person: Optional[str] = ""
     oggetto: Optional[str] = ""
     final_notes: Optional[str] = ""
+    show_vat: Optional[bool] = True
 
 
 class QuotePayload(BaseModel):
@@ -140,6 +141,7 @@ class QuoteResponse(BaseModel):
     oggetto: Optional[str] = ""
     quote_date: Optional[str] = ""
     final_notes: Optional[str] = ""
+    show_vat: Optional[bool] = True
     total_amount: Optional[str] = "0.00"
     created_at: Optional[str] = ""
 

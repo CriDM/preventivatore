@@ -80,6 +80,7 @@ class Quote(Base):
     final_notes = Column(Text, default="")
     items_json = Column(Text, default="[]")
     version = Column(Integer, default=1)
+    show_vat = Column(Integer, default=1)
     total_amount = Column(String, default="0.00")
     created_at = Column(String, default="")
 
@@ -101,7 +102,7 @@ def run_migrations():
                     if column.name not in existing_cols:
                         col_type = column.type.compile(engine.dialect)
                         default_clause = ""
-                        if column.name == "version":
+                        if column.name in ("version", "show_vat"):
                             default_clause = " DEFAULT 1"
                         elif column.default is not None and column.default.is_scalar:
                             val = column.default.arg
@@ -114,6 +115,8 @@ def run_migrations():
                         conn.execute(text(sql))
                         if table_name == "quotes" and column.name == "version":
                             conn.execute(text("UPDATE quotes SET version = 1 WHERE version IS NULL"))
+                        if table_name == "quotes" and column.name == "show_vat":
+                            conn.execute(text("UPDATE quotes SET show_vat = 1 WHERE show_vat IS NULL"))
 
 
 def get_db():

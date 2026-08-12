@@ -332,8 +332,12 @@
             <div class="card card-custom">
                 <div class="card-header-custom">
                     <span><i class="bi bi-list-stars text-danger me-2"></i> Articoli del Preventivo</span>
-                    <div>
-                        <button class="btn btn-sm btn-outline-secondary me-2" onclick="clearItemsTable()">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" id="showVatCheckbox" checked onchange="toggleVatColumn()">
+                            <label class="form-check-label fw-semibold text-secondary small" for="showVatCheckbox">Mostra colonna IVA (in tabella e in stampa)</label>
+                        </div>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="clearItemsTable()">
                             <i class="bi bi-trash3 me-1"></i> Svuota Articoli
                         </button>
                         <button class="btn btn-sm btn-outline-success" onclick="addRow()">
@@ -349,7 +353,7 @@
                                     <th style="width: 38%;">Descrizione Articolo</th>
                                     <th style="width: 12%;">Quantità</th>
                                     <th style="width: 16%;">Prezzo Unitario (€)</th>
-                                    <th style="width: 12%;">IVA %</th>
+                                    <th style="width: 12%;" class="vat-col">IVA %</th>
                                     <th style="width: 14%; text-align: right;">Totale (€)</th>
                                     <th style="width: 8%; text-align: right;">Azioni</th>
                                 </tr>
@@ -603,6 +607,13 @@
     }
 
     // --- QUOTE FORM & ITEMS MANAGEMENT ---
+    function toggleVatColumn() {
+        const show = document.getElementById('showVatCheckbox').checked;
+        document.querySelectorAll('.vat-col').forEach(el => {
+            el.style.display = show ? '' : 'none';
+        });
+    }
+
     function addRow(name = '', qty = 1, price = 0, vat = 22) {
         const tbody = document.getElementById('itemsBody');
         const tr = document.createElement('tr');
@@ -610,7 +621,7 @@
             <td><input type="text" class="form-control item-name" placeholder="Descrizione articolo" value="${name}" oninput="calculateTotals()"></td>
             <td><input type="number" class="form-control item-qty" value="${qty}" min="1" step="1" oninput="calculateTotals()"></td>
             <td><input type="number" class="form-control item-price" value="${price}" step="0.01" oninput="calculateTotals()"></td>
-            <td><input type="number" class="form-control item-vat" value="${vat}" step="1" oninput="calculateTotals()"></td>
+            <td class="vat-col"><input type="number" class="form-control item-vat" value="${vat}" step="1" oninput="calculateTotals()"></td>
             <td class="text-end fw-bold item-row-total">0,00 €</td>
             <td class="text-end">
                 <div class="btn-group btn-group-sm">
@@ -620,6 +631,7 @@
             </td>
         `;
         tbody.appendChild(tr);
+        toggleVatColumn();
         calculateTotals();
     }
 
@@ -872,7 +884,8 @@
                 contact_person: document.getElementById('contact_person').value.trim(),
                 oggetto: document.getElementById('oggetto').value.trim(),
                 quote_date: document.getElementById('quote_date').value.trim() || new Date().toLocaleDateString('it-IT'),
-                final_notes: document.getElementById('final_notes').value.trim()
+                final_notes: document.getElementById('final_notes').value.trim(),
+                show_vat: document.getElementById('showVatCheckbox').checked
             },
             items: items
         };
@@ -1000,6 +1013,8 @@
         }
 
         document.getElementById('final_notes').value = quote.final_notes || '';
+        document.getElementById('showVatCheckbox').checked = quote.show_vat !== undefined ? Boolean(quote.show_vat) : true;
+        toggleVatColumn();
 
         // Fill items
         clearItemsTable();

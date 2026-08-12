@@ -159,14 +159,30 @@ def generate_quote_pdf(items: List[Dict], data: Dict, output_path: str) -> str:
     story.append(Spacer(1, 3 * mm))
 
     # 6. TABELLA ARTICOLI con righe alternate
-    table_data = [[
-        "Descrizione",
-        "Quantità",
-        "Prezzo cad.",
-        "Importo Tot",
-        "C.Iva %",
-        "Totale",
-    ]]
+    raw_show_vat = data.get("show_vat", True)
+    if isinstance(raw_show_vat, str):
+        show_vat = raw_show_vat.lower() not in ("false", "0", "no")
+    else:
+        show_vat = bool(raw_show_vat)
+
+    if show_vat:
+        table_data = [[
+            "Descrizione",
+            "Quantità",
+            "Prezzo cad.",
+            "Importo Tot",
+            "C.Iva %",
+            "Totale",
+        ]]
+        col_widths = [70 * mm, 16 * mm, 20 * mm, 20 * mm, 16 * mm, 25 * mm]
+    else:
+        table_data = [[
+            "Descrizione",
+            "Quantità",
+            "Prezzo cad.",
+            "Totale",
+        ]]
+        col_widths = [105 * mm, 20 * mm, 25 * mm, 30 * mm]
 
     totale_generale = Decimal("0")
     totale_imponibile = Decimal("0")
@@ -176,8 +192,8 @@ def generate_quote_pdf(items: List[Dict], data: Dict, output_path: str) -> str:
         unit_price = _q(item["unit_price"])
         quantity = _q(item["quantity"])
         total = _q(item["total"])
-        vat_percent = _q(item["vat_percent"])
-        total_with_vat = _q(item["total_with_vat"])
+        vat_percent = _q(item.get("vat_percent", 0))
+        total_with_vat = _q(item.get("total_with_vat", total))
 
         totale_generale += total_with_vat
         totale_imponibile += total
@@ -185,54 +201,96 @@ def generate_quote_pdf(items: List[Dict], data: Dict, output_path: str) -> str:
         # Formattazione quantità senza decimali se è intero
         qty_str = f"{int(quantity)}" if quantity % 1 == 0 else _eur(quantity)
 
-        table_data.append([
-            item["name"],
-            qty_str,
-            _eur(unit_price),
-            _eur(total),
-            f"{int(vat_percent)}%" if vat_percent % 1 == 0 else _eur(vat_percent),
-            _eur(total_with_vat),
-        ])
+        if show_vat:
+            table_data.append([
+                item["name"],
+                qty_str,
+                _eur(unit_price),
+                _eur(total),
+                f"{int(vat_percent)}%" if vat_percent % 1 == 0 else _eur(vat_percent),
+                _eur(total_with_vat),
+            ])
+        else:
+            table_data.append([
+                item["name"],
+                qty_str,
+                _eur(unit_price),
+                _eur(total_with_vat),
+            ])
         row_index += 1
 
-    # Aggiungi riga finale con imponibile e totale sulla stessa linea.
-    table_data.append(["", "", "", _eur(totale_imponibile), "", _eur(totale_generale)])
-    row_totali = len(table_data) - 1
+    if show_vat:
+        # Aggiungi riga finale con imponibile e totale sulla stessa linea.
+        table_data.append(["", "", "", _eur(totale_imponibile), "", _eur(totale_generale)])
+        row_totali = len(table_data) - 1
 
-    col_widths = [70 * mm, 16 * mm, 20 * mm, 20 * mm, 16 * mm, 25 * mm]
-    quote_table = Table(table_data, colWidths=col_widths, repeatRows=1)
-    
-    # Stili tabella: righe alternate di colore
-    table_styles = [
-        # Header
-        ("BACKGROUND", (0, 0), (-1, 0), HEADER_BG),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("ALIGN", (0, 0), (-1, 0), "CENTER"),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("FONTSIZE", (0, 0), (-1, 0), 9),
+        quote_table = Table(table_data, colWidths=col_widths, repeatRows=1)
         
-        # Righe dati - alternare colori molto leggeri
-        ("ROWBACKGROUNDS", (0, 1), (-1, row_totali - 1), [colors.white, colors.HexColor("#fafafa")]),
+        # Stili tabella: righe alternate di colore
+        table_styles = [
+            # Header
+            ("BACKGROUND", (0, 0), (-1, 0), HEADER_BG),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("ALIGN", (0, 0), (-1, 0), "CENTER"),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("FONTSIZE", (0, 0), (-1, 0), 9),
+            
+            # Righe dati - alternare colori molto leggeri
+            ("ROWBACKGROUNDS", (0, 1), (-1, row_totali - 1), [colors.white, colors.HexColor("#fafafa")]),
+            
+            # Riga finale: imponibile nero sotto Importo Tot, totale finale rosso sotto Totale
+            ("FONTNAME", (3, row_totali), (3, row_totali), "Helvetica-Bold"),
+            ("TEXTCOLOR", (3, row_totali), (3, row_totali), colors.black),
+            ("FONTNAME", (5, row_totali), (5, row_totali), "Helvetica-Bold"),
+            ("TEXTCOLOR", (5, row_totali), (5, row_totali), RED),
+            
+            # Allineamento colonne
+            ("ALIGN", (0, 1), (0, -1), "LEFT"),     # Descrizione sinistra
+            ("ALIGN", (1, 1), (1, -1), "CENTER"),   # Quantità centro
+            ("ALIGN", (2, 1), (-1, -1), "RIGHT"),   # Prezzi e valute destra
+            
+            # Bordi
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+            ("FONTSIZE", (0, 1), (-1, -1), 8),
+            ("LINEABOVE", (3, row_totali), (3, row_totali), 0.5, colors.grey),
+            ("LINEABOVE", (5, row_totali), (5, row_totali), 0.8, colors.grey),
+        ]
+    else:
+        # Riga finale senza la colonna IVA: mostra il totale generale direttamente sotto la colonna Totale
+        table_data.append(["", "", "", _eur(totale_generale)])
+        row_totali = len(table_data) - 1
+
+        quote_table = Table(table_data, colWidths=col_widths, repeatRows=1)
         
-        # Riga finale: imponibile nero sotto Importo Tot, totale finale rosso sotto Totale
-        ("FONTNAME", (3, row_totali), (3, row_totali), "Helvetica-Bold"),
-        ("TEXTCOLOR", (3, row_totali), (3, row_totali), colors.black),
-        ("FONTNAME", (5, row_totali), (5, row_totali), "Helvetica-Bold"),
-        ("TEXTCOLOR", (5, row_totali), (5, row_totali), RED),
-        
-        # Allineamento colonne
-        ("ALIGN", (0, 1), (0, -1), "LEFT"),     # Descrizione sinistra
-        ("ALIGN", (1, 1), (1, -1), "CENTER"),   # Quantità centro
-        ("ALIGN", (2, 1), (-1, -1), "RIGHT"),   # Prezzi e valute destra
-        
-        # Bordi
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-        ("TOPPADDING", (0, 0), (-1, -1), 4),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-        ("FONTSIZE", (0, 1), (-1, -1), 8),
-        ("LINEABOVE", (3, row_totali), (3, row_totali), 0.5, colors.grey),
-        ("LINEABOVE", (5, row_totali), (5, row_totali), 0.8, colors.grey),
-    ]
+        table_styles = [
+            # Header
+            ("BACKGROUND", (0, 0), (-1, 0), HEADER_BG),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("ALIGN", (0, 0), (-1, 0), "CENTER"),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("FONTSIZE", (0, 0), (-1, 0), 9),
+            
+            # Righe dati - alternare colori molto leggeri
+            ("ROWBACKGROUNDS", (0, 1), (-1, row_totali - 1), [colors.white, colors.HexColor("#fafafa")]),
+            
+            # Riga finale: totale finale rosso sotto Totale (colonna 3)
+            ("FONTNAME", (3, row_totali), (3, row_totali), "Helvetica-Bold"),
+            ("TEXTCOLOR", (3, row_totali), (3, row_totali), RED),
+            
+            # Allineamento colonne
+            ("ALIGN", (0, 1), (0, -1), "LEFT"),     # Descrizione sinistra
+            ("ALIGN", (1, 1), (1, -1), "CENTER"),   # Quantità centro
+            ("ALIGN", (2, 1), (-1, -1), "RIGHT"),   # Prezzi e valute destra
+            
+            # Bordi
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+            ("FONTSIZE", (0, 1), (-1, -1), 8),
+            ("LINEABOVE", (3, row_totali), (3, row_totali), 0.8, colors.grey),
+        ]
     
     quote_table.setStyle(TableStyle(table_styles))
     story.append(quote_table)

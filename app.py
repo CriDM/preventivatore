@@ -434,6 +434,7 @@ async def generate_pdf_endpoint(
 
         data_dict["quote_number"] = payload.quote_number
         data_dict["version"] = quote_version
+        data_dict["show_vat"] = payload.data.show_vat if payload.data.show_vat is not None else True
 
         # Generate PDF with ReportLab
         pdf_path = generate_quote_pdf(items_dict, data_dict, temp_pdf_path)
@@ -463,6 +464,7 @@ async def generate_pdf_endpoint(
                 oggetto=payload.data.oggetto or "",
                 quote_date=payload.data.quote_date or datetime.now().strftime("%d/%m/%Y"),
                 final_notes=payload.data.final_notes or "",
+                show_vat=1 if (payload.data.show_vat if payload.data.show_vat is not None else True) else 0,
                 items_json=items_json_str,
                 total_amount=total_amount_str,
                 created_at=datetime.now().isoformat()
@@ -546,7 +548,8 @@ async def download_archived_quote_pdf(
         "customer_address": quote.customer_address,
         "contact_person": quote.contact_person,
         "oggetto": quote.oggetto,
-        "final_notes": quote.final_notes
+        "final_notes": quote.final_notes,
+        "show_vat": bool(getattr(quote, "show_vat", 1))
     }
 
     items_dict = json.loads(quote.items_json) if quote.items_json else []
@@ -594,6 +597,7 @@ async def get_quote_details(quote_id: int, user: User = Depends(get_current_user
         "oggetto": quote.oggetto,
         "quote_date": quote.quote_date,
         "final_notes": quote.final_notes,
+        "show_vat": bool(getattr(quote, "show_vat", 1)),
         "total_amount": quote.total_amount,
         "items": items,
         "created_at": quote.created_at
