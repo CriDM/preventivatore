@@ -632,6 +632,7 @@ async def create_new_quote_version(quote_id: int, user: User = Depends(get_curre
         oggetto=original_quote.oggetto,
         quote_date=datetime.now().strftime("%d/%m/%Y"),
         final_notes=original_quote.final_notes,
+        show_vat=getattr(original_quote, "show_vat", 1),
         items_json=original_quote.items_json,
         total_amount=original_quote.total_amount,
         created_at=datetime.now().isoformat()

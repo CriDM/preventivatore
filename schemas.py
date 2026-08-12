@@ -142,6 +142,7 @@ class QuoteResponse(BaseModel):
     quote_date: Optional[str] = ""
     final_notes: Optional[str] = ""
     show_vat: Optional[bool] = True
+    items_json: Optional[str] = "[]"
     total_amount: Optional[str] = "0.00"
     created_at: Optional[str] = ""
 
