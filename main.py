@@ -1,4 +1,7 @@
-__version__ = "1.0.1"
+try:
+    from version import __version__
+except ImportError:
+    __version__ = "1.0.2"
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 import json
 import threading
@@ -903,6 +906,7 @@ del "%~f0"
         ctk.CTkButton(right_frame, text="📂 Importa", command=self.load_project, width=100).pack(side="left", padx=4)
         ctk.CTkButton(right_frame, text="👁️ Anteprima", command=self.preview_pdf, width=110).pack(side="left", padx=4)
         ctk.CTkButton(right_frame, text="📄 GENERA PDF", command=self.generate_pdf, fg_color="#388e3c", hover_color="#2e7d32", width=140).pack(side="left", padx=(15, 0))
+        ctk.CTkLabel(right_frame, text=f"v{__version__}", font=ctk.CTkFont(family="Helvetica", size=11, weight="bold"), text_color="#888888").pack(side="left", padx=(12, 0))
 
     def _refresh_customer_combo(self):
         customers = storage.load_customers()

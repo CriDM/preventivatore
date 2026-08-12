@@ -100,6 +100,15 @@ async def login_page():
 async def admin_page():
     return FileResponse("static/admin.html")
 
+try:
+    from version import __version__
+except ImportError:
+    __version__ = "1.0.2"
+
+@app.get("/api/version")
+async def get_app_version():
+    return {"version": __version__}
+
 
 from sqlalchemy import func
 
