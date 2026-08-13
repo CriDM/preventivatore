@@ -4,14 +4,16 @@ on:
   push:
     branches:
       - main
+      - test
 
 jobs:
-  deploy:
-    name: Deploy Docker App
+  deploy-prod:
+    name: Deploy Production (main)
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy to Oracle Cloud via SSH
+      - name: Deploy Production to Oracle Cloud via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.OCI_HOST }}
@@ -21,4 +23,42 @@ jobs:
             cd /home/ubuntu/preventivatore
             git fetch origin main
             git reset --hard origin/main
-            docker compose up -d --build
+            if [ ! -f .env ]; then
+              cp .env.example .env
+            fi
+            grep -q "^HOST_PORT=" .env && sed -i 's/^HOST_PORT=.*/HOST_PORT=8000/' .env || echo "HOST_PORT=8000" >> .env
+            grep -q "^HOST_DB_PORT=" .env && sed -i 's/^HOST_DB_PORT=.*/HOST_DB_PORT=5432/' .env || echo "HOST_DB_PORT=5432" >> .env
+            grep -q "^COMPOSE_PROJECT_NAME=" .env && sed -i 's/^COMPOSE_PROJECT_NAME=.*/COMPOSE_PROJECT_NAME=preventivatore/' .env || echo "COMPOSE_PROJECT_NAME=preventivatore" >> .env
+            docker compose -p preventivatore up -d --build
+
+  deploy-test:
+    name: Deploy Test (test)
+    if: github.ref == 'refs/heads/test'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy Test to Oracle Cloud via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.OCI_HOST }}
+          username: ${{ secrets.OCI_USERNAME }}
+          key: ${{ secrets.OCI_SSH_KEY }}
+          script: |
+            mkdir -p /home/ubuntu/preventivatore-test
+            cd /home/ubuntu/preventivatore-test
+            if [ ! -d .git ]; then
+              git clone https://github.com/${{ github.repository }}.git .
+            fi
+            git fetch origin test
+            git checkout test 2>/dev/null || git checkout -b test origin/test
+            git reset --hard origin/test
+            if [ ! -f .env ]; then
+              cp .env.example .env
+            fi
+            grep -q "^HOST_PORT=" .env && sed -i 's/^HOST_PORT=.*/HOST_PORT=8001/' .env || echo "HOST_PORT=8001" >> .env
+            grep -q "^HOST_DB_PORT=" .env && sed -i 's/^HOST_DB_PORT=.*/HOST_DB_PORT=5433/' .env || echo "HOST_DB_PORT=5433" >> .env
+            grep -q "^COMPOSE_PROJECT_NAME=" .env && sed -i 's/^COMPOSE_PROJECT_NAME=.*/COMPOSE_PROJECT_NAME=preventivatore-test/' .env || echo "COMPOSE_PROJECT_NAME=preventivatore-test" >> .env
+            grep -q "^POSTGRES_DB=" .env && sed -i 's/^POSTGRES_DB=.*/POSTGRES_DB=preventivatore_test_db/' .env || echo "POSTGRES_DB=preventivatore_test_db" >> .env
+            sed -i 's/preventivatore_db/preventivatore_test_db/g' .env || true
+            docker compose -p preventivatore-test up -d --build
+
