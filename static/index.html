@@ -13,6 +13,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#c41e3a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
     
     <script>
         (function() {
@@ -212,6 +217,12 @@
         </a>
 
         <div class="d-flex align-items-center gap-3">
+            <!-- Connection Status Badge -->
+            <div id="networkStatusBadge" class="d-flex align-items-center gap-1 border px-2.5 py-1 rounded-pill small fw-semibold text-success border-success-subtle bg-success-subtle shadow-sm" style="font-size: 13px;">
+                <i class="bi bi-wifi" id="networkStatusIcon"></i>
+                <span id="networkStatusText">Online</span>
+            </div>
+
             <!-- Theme Selector Dropdown -->
             <div class="dropdown">
                 <button class="btn btn-outline-secondary btn-sm dropdown-toggle d-flex align-items-center" type="button" id="themeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
@@ -500,15 +511,79 @@
             </form>
         </div>
     </div>
+<!-- Sync Toast Notification -->
+<div class="toast-container position-fixed bottom-0 start-50 translate-middle-x p-3" style="z-index: 1100;">
+    <div id="syncToast" class="toast align-items-center text-bg-success border-0 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body fs-6 fw-semibold">
+                <i class="bi bi-cloud-check-fill me-2"></i> <span id="syncToastText">Sincronizzazione completata!</span>
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/static/vendor/jspdf.umd.min.js"></script>
+<script src="/static/vendor/jspdf.plugin.autotable.min.js"></script>
+<script src="/static/offline-store.js"></script>
+<script src="/static/pdf-client.js"></script>
 
 <script>
+
     let token = localStorage.getItem('access_token');
     let currentUser = null;
     let customersList = [];
     let archivedQuotesList = [];
+
+    // Service Worker Registration
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW registration failed:', err));
+        });
+    }
+
+    function updateNetworkStatusUI() {
+        const badge = document.getElementById('networkStatusBadge');
+        const icon = document.getElementById('networkStatusIcon');
+        const text = document.getElementById('networkStatusText');
+        if (!badge) return;
+
+        if (navigator.onLine) {
+            badge.className = "d-flex align-items-center gap-1 border px-2.5 py-1 rounded-pill small fw-semibold text-success border-success-subtle bg-success-subtle shadow-sm";
+            icon.className = "bi bi-wifi";
+            text.innerText = "Online";
+        } else {
+            badge.className = "d-flex align-items-center gap-1 border px-2.5 py-1 rounded-pill small fw-semibold text-warning border-warning-subtle bg-warning-subtle shadow-sm";
+            icon.className = "bi bi-wifi-off";
+            text.innerText = "Offline (Modalità Locale)";
+        }
+    }
+
+    window.addEventListener('online', () => {
+        updateNetworkStatusUI();
+        triggerGlobalSync();
+    });
+    window.addEventListener('offline', updateNetworkStatusUI);
+
+    function showSyncToast(message) {
+        const toastEl = document.getElementById('syncToast');
+        const toastText = document.getElementById('syncToastText');
+        if (toastEl && toastText) {
+            toastText.innerText = message || 'Dati sincronizzati con il server!';
+            const bsToast = new bootstrap.Toast(toastEl, { delay: 4500 });
+            bsToast.show();
+        }
+    }
+
+    async function triggerGlobalSync() {
+        if (!navigator.onLine) return;
+        await syncOfflineQueue(token, (syncedCount) => {
+            showSyncToast(`${syncedCount} modifiche sincronizzate con il server!`);
+            loadCustomers();
+            loadQuoteArchive();
+        });
+    }
 
     // --- THEME MANAGEMENT ---
     function getSavedTheme() {
@@ -545,69 +620,99 @@
 
     // --- AUTH & INITIALIZATION ---
     async function checkAuth() {
+        updateNetworkStatusUI();
+
         if (!token) {
             window.location.href = '/login';
             return;
         }
 
-        try {
-            const res = await fetch('/api/me', {
-                headers: { 'Authorization': 'Bearer ' + token }
-            });
+        let authenticatedOnline = false;
 
-            if (!res.ok) throw new Error("Unauthorized");
+        if (navigator.onLine) {
+            try {
+                const res = await fetch('/api/me', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
 
-            currentUser = await res.json();
-            if (document.getElementById('userUsername')) {
-                document.getElementById('userUsername').innerText = currentUser.username;
+                if (res.ok) {
+                    currentUser = await res.json();
+                    authenticatedOnline = true;
+                    if (currentUser.company) {
+                        dbSaveCompany(currentUser.company);
+                    }
+                    localStorage.setItem('cached_username', currentUser.username || '');
+                    localStorage.setItem('cached_role', currentUser.role || '');
+                } else if (res.status === 401) {
+                    window.location.href = '/login';
+                    return;
+                }
+            } catch (e) {
+                console.warn("[Auth] Network error, falling back to local company cache:", e);
             }
+        }
 
-            if (currentUser.role === 'admin' && document.getElementById('adminLinkContainer')) {
-                document.getElementById('adminLinkContainer').classList.remove('d-none');
-            }
+        if (!authenticatedOnline) {
+            const cachedCompany = await dbGetCompany();
+            const cachedUsername = localStorage.getItem('cached_username') || localStorage.getItem('username') || 'Utente';
+            const cachedRole = localStorage.getItem('cached_role') || localStorage.getItem('user_role') || 'user';
 
-            const appLogo = document.getElementById('appLogoImg');
-            const companyLogoContainer = document.getElementById('companyLogoContainer');
-            const companyLogoImg = document.getElementById('headerCompanyLogo');
-            const companyNameSpan = document.getElementById('headerCompanyName');
+            currentUser = {
+                username: cachedUsername,
+                role: cachedRole,
+                company: cachedCompany || { company_name: 'Croce e Cuore Arte Sacra' }
+            };
+        }
 
-            if (currentUser.company && currentUser.company.company_name) {
-                if (companyNameSpan) companyNameSpan.innerText = currentUser.company.company_name;
+        if (document.getElementById('userUsername')) {
+            document.getElementById('userUsername').innerText = currentUser.username;
+        }
 
-                if (currentUser.company.logo_filename && companyLogoImg) {
-                    companyLogoImg.onerror = function() {
-                        if (companyLogoContainer) companyLogoContainer.classList.add('d-none');
-                        if (appLogo) appLogo.classList.remove('d-none');
-                    };
-                    companyLogoImg.onload = function() {
-                        if (companyLogoContainer) companyLogoContainer.classList.remove('d-none');
-                        if (appLogo) appLogo.classList.add('d-none');
-                    };
-                    companyLogoImg.src = `/api/companies/${currentUser.company.id}/logo?t=${Date.now()}`;
-                } else {
+        if (currentUser.role === 'admin' && document.getElementById('adminLinkContainer')) {
+            document.getElementById('adminLinkContainer').classList.remove('d-none');
+        }
+
+        const appLogo = document.getElementById('appLogoImg');
+        const companyLogoContainer = document.getElementById('companyLogoContainer');
+        const companyLogoImg = document.getElementById('headerCompanyLogo');
+        const companyNameSpan = document.getElementById('headerCompanyName');
+
+        if (currentUser.company && currentUser.company.company_name) {
+            if (companyNameSpan) companyNameSpan.innerText = currentUser.company.company_name;
+
+            if (currentUser.company.id && currentUser.company.logo_filename && companyLogoImg) {
+                companyLogoImg.onerror = function() {
                     if (companyLogoContainer) companyLogoContainer.classList.add('d-none');
                     if (appLogo) appLogo.classList.remove('d-none');
-                }
+                };
+                companyLogoImg.onload = function() {
+                    if (companyLogoContainer) companyLogoContainer.classList.remove('d-none');
+                    if (appLogo) appLogo.classList.add('d-none');
+                };
+                companyLogoImg.src = `/api/companies/${currentUser.company.id}/logo?t=${Date.now()}`;
             } else {
-                if (companyNameSpan) companyNameSpan.innerText = "Preventivatore";
                 if (companyLogoContainer) companyLogoContainer.classList.add('d-none');
                 if (appLogo) appLogo.classList.remove('d-none');
             }
+        } else {
+            if (companyNameSpan) companyNameSpan.innerText = "Preventivatore";
+            if (companyLogoContainer) companyLogoContainer.classList.add('d-none');
+            if (appLogo) appLogo.classList.remove('d-none');
+        }
 
-            // Set default date
-            const dateInput = document.getElementById('quote_date');
-            if (dateInput) {
-                dateInput.value = new Date().toLocaleDateString('it-IT');
-            }
+        const dateInput = document.getElementById('quote_date');
+        if (dateInput && !dateInput.value) {
+            dateInput.value = new Date().toLocaleDateString('it-IT');
+        }
 
-            // Load initial customer list
-            loadCustomers();
+        loadCustomers();
+        loadQuoteArchive();
 
-        } catch (e) {
-            console.error("Auth check error:", e);
-            window.location.href = '/login';
+        if (navigator.onLine) {
+            triggerGlobalSync();
         }
     }
+
 
     // --- QUOTE FORM & ITEMS MANAGEMENT ---
     function toggleVatColumn() {
@@ -708,22 +813,32 @@
 
     // --- ANAGRAFICA CLIENTI ---
     async function loadCustomers() {
-        try {
-            const res = await fetch('/api/customers', {
-                headers: { 'Authorization': 'Bearer ' + token }
-            });
-            customersList = await res.json();
+        if (navigator.onLine) {
+            try {
+                const res = await fetch('/api/customers', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (res.ok) {
+                    customersList = await res.json();
+                    await dbSaveCustomers(customersList);
+                }
+            } catch (e) {
+                console.warn("[Customers] Network error, loading from local DB:", e);
+                customersList = await dbGetCustomers();
+            }
+        } else {
+            customersList = await dbGetCustomers();
+        }
 
-            const datalist = document.getElementById('customerDatalist');
+        const datalist = document.getElementById('customerDatalist');
+        if (datalist) {
             datalist.innerHTML = '';
             customersList.forEach(c => {
                 datalist.innerHTML += `<option value="${c.name}">`;
             });
-
-            renderCustomersTable(customersList);
-        } catch (e) {
-            console.error(e);
         }
+
+        renderCustomersTable(customersList);
     }
 
     function onCustomerSelect() {
@@ -776,7 +891,6 @@
         document.getElementById('customer_address').value = address;
         document.getElementById('contact_person').value = contact;
 
-        // Switch to quote tab
         const quoteTabBtn = document.getElementById('quote-tab');
         bootstrap.Tab.getInstance(quoteTabBtn).show();
     }
@@ -802,39 +916,70 @@
             contact: document.getElementById('editCustContact').value
         };
 
-        try {
-            const res = await fetch(`/api/customers/${id}`, {
-                method: 'PUT',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + token 
-                },
-                body: JSON.stringify(payload)
-            });
+        if (navigator.onLine) {
+            try {
+                const res = await fetch(`/api/customers/${id}`, {
+                    method: 'PUT',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token 
+                    },
+                    body: JSON.stringify(payload)
+                });
 
-            if (res.ok) {
-                bootstrap.Modal.getInstance(document.getElementById('editCustomerModal')).hide();
-                loadCustomers();
-            } else {
-                const err = await res.json();
-                alert("Errore: " + (err.detail || "Impossibile aggiornare cliente"));
+                if (res.ok) {
+                    bootstrap.Modal.getInstance(document.getElementById('editCustomerModal')).hide();
+                    loadCustomers();
+                    return;
+                }
+            } catch (e) {
+                console.warn("[Customer Update] Network error, updating locally:", e);
             }
-        } catch (e) {
-            alert("Errore di rete");
+        }
+
+        // Offline update customer
+        const custIndex = customersList.findIndex(c => c.id == id);
+        if (custIndex !== -1) {
+            customersList[custIndex] = { ...customersList[custIndex], ...payload };
+            await dbSaveCustomers(customersList);
+            await dbQueueSyncAction({
+                url: `/api/customers/${id}`,
+                method: 'PUT',
+                payload: payload
+            });
+            bootstrap.Modal.getInstance(document.getElementById('editCustomerModal')).hide();
+            showSyncToast("Cliente aggiornato in locale! Sincronizzazione in corso alla riconnessione.");
+            renderCustomersTable(customersList);
         }
     }
 
     async function deleteCustomer(id) {
         if (!confirm("Eliminare questo cliente dall'anagrafica?")) return;
-        try {
-            const res = await fetch(`/api/customers/${id}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': 'Bearer ' + token }
-            });
-            if (res.ok) loadCustomers();
-        } catch (e) {
-            alert("Errore durante l'eliminazione");
+        
+        if (navigator.onLine) {
+            try {
+                const res = await fetch(`/api/customers/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (res.ok) {
+                    loadCustomers();
+                    return;
+                }
+            } catch (e) {
+                console.warn("[Customer Delete] Network error, deleting locally:", e);
+            }
         }
+
+        // Offline delete customer
+        customersList = customersList.filter(c => c.id != id);
+        await dbDeleteItem('customers', id);
+        await dbQueueSyncAction({
+            url: `/api/customers/${id}`,
+            method: 'DELETE'
+        });
+        showSyncToast("Cliente rimosso in locale.");
+        renderCustomersTable(customersList);
     }
 
     function filterCustomers() {
@@ -901,234 +1046,408 @@
             items: items
         };
 
-        try {
-            const response = await fetch('/api/quotes/generate-pdf', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + token
-                },
-                body: JSON.stringify(payload)
-            });
+        let generatedOnline = false;
 
-            if (response.ok) {
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                if (preview) {
-                    window.open(url, '_blank');
-                } else {
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `preventivo_${payload.quote_number || 'pdf'}.pdf`;
-                    document.body.appendChild(a);
-                    a.click();
-                    a.remove();
+        if (navigator.onLine) {
+            try {
+                const response = await fetch('/api/quotes/generate-pdf', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    generatedOnline = true;
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    if (preview) {
+                        window.open(url, '_blank');
+                    } else {
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `preventivo_${payload.quote_number || 'pdf'}.pdf`;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                    }
+
+                    loadCustomers();
+                    loadQuoteArchive();
                 }
-
-                // Reload customer list & quote archive automatically
-                loadCustomers();
-            } else {
-                const err = await response.json();
-                alert("Errore durante la generazione: " + (err.detail || "Impossibile generare il PDF"));
+            } catch (error) {
+                console.warn("[PDF] Network fetch failed, falling back to client-side PDF generation:", error);
             }
-        } catch (error) {
-            alert("Errore di rete durante la generazione del PDF");
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = origHtml;
         }
+
+        // Offline mode OR network failure fallback: Generate PDF client-side!
+        if (!generatedOnline) {
+            try {
+                const companyData = currentUser?.company || await dbGetCompany() || {};
+                await generateClientPdf(payload.data, payload.items, companyData, {
+                    preview: preview,
+                    download: !preview,
+                    filename: `preventivo_${payload.quote_number || 'offline'}.pdf`
+                });
+
+                // Compute total amount string for local archive display
+                let totSum = 0;
+                items.forEach(it => {
+                    const lineVal = payload.data.show_vat ? (it.total_with_vat || (it.quantity * it.unit_price * (1 + (it.vat_percent/100)))) : (it.quantity * it.unit_price);
+                    totSum += lineVal;
+                });
+                const totalAmountStr = formatEur(totSum);
+
+                const localId = Date.now();
+                const newQuoteObj = {
+                    id: localId,
+                    quote_number: payload.quote_number || `OFF-${localId}`,
+                    version: payload.version || 1,
+                    customer_name: payload.data.customer_name || '',
+                    customer_address: payload.data.customer_address || '',
+                    contact_person: payload.data.contact_person || '',
+                    oggetto: payload.data.oggetto || '',
+                    quote_date: payload.data.quote_date,
+                    final_notes: payload.data.final_notes || '',
+                    show_vat: payload.data.show_vat ? 1 : 0,
+                    items_json: JSON.stringify(items),
+                    items: items,
+                    total_amount: totalAmountStr,
+                    created_at: new Date().toISOString()
+                };
+
+                await dbSaveQuotes([newQuoteObj]);
+                await dbQueueSyncAction({
+                    url: '/api/quotes/generate-pdf',
+                    method: 'POST',
+                    payload: payload
+                });
+
+                showSyncToast("PDF generato e salvato in locale! Verrà sincronizzato non appena tornerà la connessione.");
+                loadQuoteArchive();
+
+            } catch (err) {
+                console.error("[PDF Client Error]", err);
+                alert("Errore durante la generazione del PDF: " + err.message);
+            }
+        }
+
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
     }
 
     // --- STORICO PREVENTIVI & RELOAD / EDIT QUOTE ---
     async function loadQuoteArchive() {
-        try {
-            const res = await fetch('/api/quotes', {
-                headers: { 'Authorization': 'Bearer ' + token }
-            });
-            archivedQuotesList = await res.json();
-            const tbody = document.getElementById('archiveTableBody');
-            tbody.innerHTML = '';
-
-            if (archivedQuotesList.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Nessun preventivo salvato nello storico</td></tr>';
-                return;
+        if (navigator.onLine) {
+            try {
+                const res = await fetch('/api/quotes', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (res.ok) {
+                    archivedQuotesList = await res.json();
+                    await dbSaveQuotes(archivedQuotesList);
+                }
+            } catch (e) {
+                console.warn("[QuoteArchive] Network error, loading from local DB:", e);
+                archivedQuotesList = await dbGetQuotes();
             }
-
-            archivedQuotesList.forEach(q => {
-                const ver = q.version || 1;
-                tbody.innerHTML += `
-                    <tr>
-                        <td class="fw-bold text-danger">${q.quote_number}</td>
-                        <td><span class="badge bg-primary">v${ver}</span></td>
-                        <td>${q.quote_date}</td>
-                        <td>${q.customer_name || '-'}</td>
-                        <td>${q.oggetto || '-'}</td>
-                        <td class="fw-bold">${q.total_amount}</td>
-                        <td class="text-end">
-                            <button onclick="loadQuoteForEditing(${q.id})" class="btn btn-sm btn-outline-primary me-1" title="Modifica / Ricarica nel form">
-                                <i class="bi bi-pencil-square"></i> Modifica
-                            </button>
-                            <button onclick="createNewVersionFromArchive(${q.id})" class="btn btn-sm btn-outline-info me-1" title="Crea nuova versione v${ver + 1}">
-                                <i class="bi bi-plus-circle"></i> Nuova Versione
-                            </button>
-                            <button onclick="previewArchivedPdf(${q.id})" class="btn btn-sm btn-outline-secondary me-1" title="Anteprima PDF nel browser">
-                                <i class="bi bi-eye"></i> Anteprima
-                            </button>
-                            <button onclick="downloadArchivedPdf(${q.id}, '${q.quote_number}')" class="btn btn-sm btn-outline-success me-1" title="Scarica PDF">
-                                <i class="bi bi-download"></i> PDF
-                            </button>
-                            <button onclick="deleteArchivedQuote(${q.id})" class="btn btn-sm btn-outline-danger" title="Elimina dallo storico">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            });
-        } catch (e) {
-            console.error(e);
+        } else {
+            archivedQuotesList = await dbGetQuotes();
         }
+
+        const tbody = document.getElementById('archiveTableBody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        if (archivedQuotesList.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Nessun preventivo salvato nello storico</td></tr>';
+            return;
+        }
+
+        archivedQuotesList.forEach(q => {
+            const ver = q.version || 1;
+            tbody.innerHTML += `
+                <tr>
+                    <td class="fw-bold text-danger">${q.quote_number}</td>
+                    <td><span class="badge bg-primary">v${ver}</span></td>
+                    <td>${q.quote_date}</td>
+                    <td>${q.customer_name || '-'}</td>
+                    <td>${q.oggetto || '-'}</td>
+                    <td class="fw-bold">${q.total_amount}</td>
+                    <td class="text-end">
+                        <button onclick="loadQuoteForEditing(${q.id})" class="btn btn-sm btn-outline-primary me-1" title="Modifica / Ricarica nel form">
+                            <i class="bi bi-pencil-square"></i> Modifica
+                        </button>
+                        <button onclick="createNewVersionFromArchive(${q.id})" class="btn btn-sm btn-outline-info me-1" title="Crea nuova versione v${ver + 1}">
+                            <i class="bi bi-plus-circle"></i> Nuova Versione
+                        </button>
+                        <button onclick="previewArchivedPdf(${q.id})" class="btn btn-sm btn-outline-secondary me-1" title="Anteprima PDF nel browser">
+                            <i class="bi bi-eye"></i> Anteprima
+                        </button>
+                        <button onclick="downloadArchivedPdf(${q.id}, '${q.quote_number}')" class="btn btn-sm btn-outline-success me-1" title="Scarica PDF">
+                            <i class="bi bi-download"></i> PDF
+                        </button>
+                        <button onclick="deleteArchivedQuote(${q.id})" class="btn btn-sm btn-outline-danger" title="Elimina dallo storico">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
     }
 
     async function createNewVersionFromArchive(quoteId) {
-        try {
-            const res = await fetch(`/api/quotes/${quoteId}/new-version`, {
-                method: 'POST',
-                headers: { 'Authorization': 'Bearer ' + token }
-            });
-            if (res.ok) {
-                const data = await res.json();
-                await loadQuoteArchive();
-                if (data.new_quote_id) {
-                    loadQuoteForEditing(data.new_quote_id);
+        if (navigator.onLine) {
+            try {
+                const res = await fetch(`/api/quotes/${quoteId}/new-version`, {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    await loadQuoteArchive();
+                    if (data.new_quote_id) {
+                        loadQuoteForEditing(data.new_quote_id);
+                    }
+                    return;
                 }
-            } else {
-                const err = await res.json();
-                alert("Errore: " + (err.detail || "Impossibile creare nuova versione"));
+            } catch (e) {
+                console.warn("[NewVersion] Network error, creating version locally:", e);
             }
-        } catch (e) {
-            alert("Errore di rete");
         }
+
+        // Offline fallback for creating new version
+        const quote = archivedQuotesList.find(q => q.id === quoteId) || (await dbGetQuotes()).find(q => q.id === quoteId);
+        if (!quote) {
+            alert("Preventivo non trovato.");
+            return;
+        }
+
+        const sameNumQuotes = archivedQuotesList.filter(q => q.quote_number === quote.quote_number);
+        const maxV = Math.max(...sameNumQuotes.map(q => q.version || 1), 1);
+        const newVer = maxV + 1;
+
+        const localId = Date.now();
+        const newQuote = {
+            id: localId,
+            quote_number: quote.quote_number,
+            version: newVer,
+            customer_name: quote.customer_name,
+            customer_address: quote.customer_address,
+            contact_person: quote.contact_person,
+            oggetto: quote.oggetto,
+            quote_date: new Date().toLocaleDateString('it-IT'),
+            final_notes: quote.final_notes,
+            show_vat: quote.show_vat,
+            items_json: quote.items_json,
+            items: quote.items,
+            total_amount: quote.total_amount,
+            created_at: new Date().toISOString()
+        };
+
+        await dbSaveQuotes([newQuote]);
+        await dbQueueSyncAction({
+            url: `/api/quotes/${quoteId}/new-version`,
+            method: 'POST'
+        });
+
+        showSyncToast(`Nuova versione v${newVer} creata in locale.`);
+        await loadQuoteArchive();
+        loadQuoteForEditing(localId);
     }
 
     async function loadQuoteForEditing(quoteId) {
-        try {
-            const res = await fetch(`/api/quotes/${quoteId}`, {
-                headers: { 'Authorization': 'Bearer ' + token }
-            });
-            if (!res.ok) {
-                alert("Impossibile caricare il preventivo per la modifica.");
-                return;
-            }
-            const quote = await res.json();
-
-            // Fill form fields
-            document.getElementById('customer_name').value = quote.customer_name || '';
-            document.getElementById('customer_address').value = quote.customer_address || '';
-            document.getElementById('contact_person').value = quote.contact_person || '';
-            document.getElementById('oggetto').value = quote.oggetto || '';
-            document.getElementById('quote_date').value = quote.quote_date || new Date().toLocaleDateString('it-IT');
-            document.getElementById('quote_number').value = quote.quote_number || '';
-
-            const ver = quote.version || 1;
-            document.getElementById('quote_version').value = ver;
-            const badge = document.getElementById('currentVersionBadge');
-            if (badge) {
-                badge.innerText = 'v' + ver;
-                badge.classList.remove('d-none');
-            }
-
-            document.getElementById('final_notes').value = quote.final_notes || '';
-            document.getElementById('showVatCheckbox').checked = quote.show_vat !== undefined ? Boolean(quote.show_vat) : true;
-
-            // Fill items
-            clearItemsTable();
-            let items = quote.items;
-            if (!items && quote.items_json) {
-                try {
-                    items = typeof quote.items_json === 'string' ? JSON.parse(quote.items_json) : quote.items_json;
-                } catch (e) {
-                    console.error("Errore parsing articoli", e);
-                }
-            }
-
-            if (Array.isArray(items) && items.length > 0) {
-                items.forEach(item => {
-                    const itemVat = (item.vat_percent !== undefined && item.vat_percent !== null) ? item.vat_percent : 22;
-                    addRow(item.name || '', item.quantity || 1, item.unit_price || 0, itemVat);
+        let quote = null;
+        if (navigator.onLine) {
+            try {
+                const res = await fetch(`/api/quotes/${quoteId}`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
                 });
+                if (res.ok) {
+                    quote = await res.json();
+                }
+            } catch (e) {
+                console.warn("[LoadQuote] Network error, using cached quote:", e);
             }
-
-            toggleVatColumn();
-
-            // Switch to "Genera Preventivo" tab
-            const quoteTabBtn = document.getElementById('quote-tab');
-            bootstrap.Tab.getInstance(quoteTabBtn).show();
-        } catch (e) {
-            console.error("Errore durante il caricamento del preventivo:", e);
-            alert("Errore di rete durante il caricamento del preventivo");
         }
+
+        if (!quote) {
+            quote = archivedQuotesList.find(q => q.id === quoteId) || (await dbGetQuotes()).find(q => q.id === quoteId);
+        }
+
+        if (!quote) {
+            alert("Impossibile caricare il preventivo per la modifica.");
+            return;
+        }
+
+        // Fill form fields
+        document.getElementById('customer_name').value = quote.customer_name || '';
+        document.getElementById('customer_address').value = quote.customer_address || '';
+        document.getElementById('contact_person').value = quote.contact_person || '';
+        document.getElementById('oggetto').value = quote.oggetto || '';
+        document.getElementById('quote_date').value = quote.quote_date || new Date().toLocaleDateString('it-IT');
+        document.getElementById('quote_number').value = quote.quote_number || '';
+
+        const ver = quote.version || 1;
+        document.getElementById('quote_version').value = ver;
+        const badge = document.getElementById('currentVersionBadge');
+        if (badge) {
+            badge.innerText = 'v' + ver;
+            badge.classList.remove('d-none');
+        }
+
+        document.getElementById('final_notes').value = quote.final_notes || '';
+        document.getElementById('showVatCheckbox').checked = quote.show_vat !== undefined ? Boolean(quote.show_vat) : true;
+
+        // Fill items
+        clearItemsTable();
+        let items = quote.items;
+        if (!items && quote.items_json) {
+            try {
+                items = typeof quote.items_json === 'string' ? JSON.parse(quote.items_json) : quote.items_json;
+            } catch (e) {
+                console.error("Errore parsing articoli", e);
+            }
+        }
+
+        if (Array.isArray(items) && items.length > 0) {
+            items.forEach(item => {
+                const itemVat = (item.vat_percent !== undefined && item.vat_percent !== null) ? item.vat_percent : 22;
+                addRow(item.name || '', item.quantity || 1, item.unit_price || 0, itemVat);
+            });
+        }
+
+        toggleVatColumn();
+
+        const quoteTabBtn = document.getElementById('quote-tab');
+        bootstrap.Tab.getInstance(quoteTabBtn).show();
     }
 
     async function previewArchivedPdf(quoteId) {
-        try {
-            const response = await fetch(`/api/quotes/${quoteId}/download`, {
-                headers: { 'Authorization': 'Bearer ' + token }
-            });
+        if (navigator.onLine) {
+            try {
+                const response = await fetch(`/api/quotes/${quoteId}/download`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
 
-            if (response.ok) {
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                window.open(url, '_blank');
-            } else {
-                alert("Impossibile aprire l'anteprima del preventivo");
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    window.open(url, '_blank');
+                    return;
+                }
+            } catch (e) {
+                console.warn("[PDF Preview] Network error, generating preview client-side:", e);
             }
-        } catch (e) {
-            alert("Errore di rete");
         }
+
+        // Offline preview fallback!
+        const quote = archivedQuotesList.find(q => q.id === quoteId) || (await dbGetQuotes()).find(q => q.id === quoteId);
+        if (!quote) {
+            alert("Preventivo non trovato nei dati locali.");
+            return;
+        }
+
+        const items = typeof quote.items_json === 'string' ? JSON.parse(quote.items_json) : (quote.items || []);
+        const companyData = currentUser?.company || await dbGetCompany() || {};
+
+        generateClientPdf({
+            quote_number: quote.quote_number,
+            version: quote.version,
+            customer_name: quote.customer_name,
+            customer_address: quote.customer_address,
+            contact_person: quote.contact_person,
+            oggetto: quote.oggetto,
+            quote_date: quote.quote_date,
+            final_notes: quote.final_notes,
+            show_vat: quote.show_vat !== undefined ? Boolean(quote.show_vat) : true
+        }, items, companyData, { preview: true });
     }
 
     async function downloadArchivedPdf(quoteId, number) {
-        try {
-            const response = await fetch(`/api/quotes/${quoteId}/download`, {
-                headers: { 'Authorization': 'Bearer ' + token }
-            });
+        if (navigator.onLine) {
+            try {
+                const response = await fetch(`/api/quotes/${quoteId}/download`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
 
-            if (response.ok) {
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `preventivo_${number}.pdf`;
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-            } else {
-                alert("Impossibile scaricare il preventivo");
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `preventivo_${number}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    return;
+                }
+            } catch (e) {
+                console.warn("[PDF Download] Network error, downloading PDF client-side:", e);
             }
-        } catch (e) {
-            alert("Errore di rete");
         }
+
+        // Offline download fallback!
+        const quote = archivedQuotesList.find(q => q.id === quoteId) || (await dbGetQuotes()).find(q => q.id === quoteId);
+        if (!quote) {
+            alert("Preventivo non trovato nei dati locali.");
+            return;
+        }
+
+        const items = typeof quote.items_json === 'string' ? JSON.parse(quote.items_json) : (quote.items || []);
+        const companyData = currentUser?.company || await dbGetCompany() || {};
+
+        generateClientPdf({
+            quote_number: quote.quote_number,
+            version: quote.version,
+            customer_name: quote.customer_name,
+            customer_address: quote.customer_address,
+            contact_person: quote.contact_person,
+            oggetto: quote.oggetto,
+            quote_date: quote.quote_date,
+            final_notes: quote.final_notes,
+            show_vat: quote.show_vat !== undefined ? Boolean(quote.show_vat) : true
+        }, items, companyData, { download: true, filename: `preventivo_${number}.pdf` });
     }
 
     async function deleteArchivedQuote(quoteId) {
         if (!confirm("Sei sicuro di voler eliminare questo preventivo dallo storico?")) return;
-        try {
-            const res = await fetch(`/api/quotes/${quoteId}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': 'Bearer ' + token }
-            });
+        
+        if (navigator.onLine) {
+            try {
+                const res = await fetch(`/api/quotes/${quoteId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
 
-            if (res.ok) loadQuoteArchive();
-        } catch (e) {
-            alert("Errore di rete");
+                if (res.ok) {
+                    loadQuoteArchive();
+                    return;
+                }
+            } catch (e) {
+                console.warn("[DeleteQuote] Network error, deleting locally:", e);
+            }
         }
+
+        // Offline delete quote
+        archivedQuotesList = archivedQuotesList.filter(q => q.id !== quoteId);
+        await dbDeleteItem('quotes', quoteId);
+        await dbQueueSyncAction({
+            url: `/api/quotes/${quoteId}`,
+            method: 'DELETE'
+        });
+        showSyncToast("Preventivo eliminato dallo storico locale.");
+        loadQuoteArchive();
     }
 
     function logout() {
         localStorage.clear();
-        fetch('/api/logout', { method: 'POST' });
+        fetch('/api/logout', { method: 'POST' }).catch(() => {});
         window.location.href = '/login';
     }
+
     async function loadAppVersion() {
         try {
             const res = await fetch('/api/version');
@@ -1149,3 +1468,4 @@
 </div>
 </body>
 </html>
+

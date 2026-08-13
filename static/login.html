@@ -136,6 +136,11 @@
             font-size: 14px;
         }
     </style>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#c41e3a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
 </head>
 <body>
 
@@ -157,7 +162,16 @@
         <img src="/static/logo.png" alt="Preventivatore Logo" style="height: 80px; width: 80px; object-fit: contain; border-radius: 18px; box-shadow: 0 8px 24px rgba(196,30,58,0.3);">
     </div>
     <h3 class="text-center fw-bold mb-1" style="color: var(--text-main);">Preventivatore</h3>
-    <p class="text-center text-muted mb-4 fs-6">Inserisci le credenziali per accedere</p>
+    <p class="text-center text-muted mb-3 fs-6">Inserisci le credenziali per accedere</p>
+
+    <!-- Avviso Offline -->
+    <div id="offlineNotice" class="alert alert-warning border-warning text-dark text-start small mb-3 shadow-sm d-none" role="alert">
+        <div class="d-flex align-items-center mb-1">
+            <i class="bi bi-wifi-off fs-5 text-warning me-2"></i>
+            <strong class="fw-bold">Sei Offline</strong>
+        </div>
+        <div>Per effettuare il login è necessaria la connessione internet. Se hai già un accesso attivo salvato, puoi <a href="/" class="fw-bold text-decoration-underline text-dark">vai direttamente alla Dashboard offline</a>.</div>
+    </div>
 
     <div id="alertBox" class="alert alert-danger d-none" role="alert"></div>
 
@@ -192,6 +206,34 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
+    // Service Worker Registration
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW registration failed:', err));
+        });
+    }
+
+    // Offline connection checking for login page
+    function updateOfflineNotice() {
+        const offlineNotice = document.getElementById('offlineNotice');
+        if (!navigator.onLine) {
+            offlineNotice.classList.remove('d-none');
+        } else {
+            offlineNotice.classList.add('d-none');
+        }
+    }
+
+    window.addEventListener('online', updateOfflineNotice);
+    window.addEventListener('offline', updateOfflineNotice);
+    updateOfflineNotice();
+
+    // If user already has token stored and tries to open login page while offline, suggest redirect
+    if (!navigator.onLine && localStorage.getItem('access_token')) {
+        const alertBox = document.getElementById('alertBox');
+        alertBox.innerHTML = 'Sessione salvata rilevata! Puoi proseguire ad <a href="/" class="alert-link">usare l\'app in modalità offline</a>.';
+        alertBox.classList.remove('d-none');
+    }
+
     // --- THEME MANAGEMENT ---
     function getSavedTheme() {
         return localStorage.getItem('theme') || 'system';
@@ -235,6 +277,13 @@
         const btnSpinner = document.getElementById('btnSpinner');
 
         alertBox.classList.add('d-none');
+
+        if (!navigator.onLine) {
+            alertBox.innerHTML = '<i class="bi bi-wifi-off me-1"></i> Connessione assente. Non è possibile effettuare il login senza internet. Se avevi già effettuato l\'accesso, <a href="/" class="alert-link">apri l\'app offline</a>.';
+            alertBox.classList.remove('d-none');
+            return;
+        }
+
         submitBtn.disabled = true;
         btnText.innerText = "Accesso in corso...";
         btnSpinner.classList.remove('d-none');
@@ -274,3 +323,4 @@
 </script>
 </body>
 </html>
+

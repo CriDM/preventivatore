@@ -86,6 +86,19 @@ async def favicon_png():
         return FileResponse("static/favicon.png", media_type="image/png")
     raise HTTPException(status_code=404, detail="Favicon not found")
 
+@app.get("/manifest.json", include_in_schema=False)
+async def manifest_json():
+    if os.path.exists("static/manifest.json"):
+        return FileResponse("static/manifest.json", media_type="application/json")
+    raise HTTPException(status_code=404, detail="Manifest not found")
+
+@app.get("/sw.js", include_in_schema=False)
+async def service_worker():
+    if os.path.exists("static/sw.js"):
+        return FileResponse("static/sw.js", media_type="application/javascript", headers={"Cache-Control": "no-cache"})
+    raise HTTPException(status_code=404, detail="Service worker not found")
+
+
 
 # --- PAGE ROUTES ---
 @app.get("/")
