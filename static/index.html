@@ -304,28 +304,38 @@
                     </div>
                 </div>
 
-                <!-- Dati Preventivo -->
+                <!-- Dati Preventivo / Pagamento -->
                 <div class="col-lg-6">
                     <div class="card card-custom">
-                        <div class="card-header-custom">
+                        <div class="card-header-custom d-flex justify-content-between align-items-center flex-wrap gap-2">
                             <span class="d-flex align-items-center">
-                                <i class="bi bi-file-earmark-text text-danger me-2"></i> Dati Preventivo
+                                <i class="bi bi-file-earmark-text text-danger me-2" id="docTypeIcon"></i> 
+                                <span id="docTypeTitle">Dati Preventivo</span>
                                 <span id="currentVersionBadge" class="badge bg-primary ms-2 d-none">v1</span>
                             </span>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="resetQuoteForm()">Nuovo Preventivo</button>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="btn-group btn-group-sm" role="group" aria-label="Tipo Documento">
+                                    <input type="radio" class="btn-check" name="docTypeRadio" id="docTypePrev" value="preventivo" checked autocomplete="off" onchange="setDocType('preventivo')">
+                                    <label class="btn btn-outline-danger" for="docTypePrev"><i class="bi bi-file-earmark-text me-1"></i> Preventivo</label>
+
+                                    <input type="radio" class="btn-check" name="docTypeRadio" id="docTypePag" value="pagamento" autocomplete="off" onchange="setDocType('pagamento')">
+                                    <label class="btn btn-outline-danger" for="docTypePag"><i class="bi bi-credit-card me-1"></i> Pagamento</label>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="resetQuoteForm()">Nuovo</button>
+                            </div>
                         </div>
                         <div class="card-body p-4">
                             <div class="mb-3">
-                                <label class="form-label text-muted small fw-bold">OGGETTO</label>
+                                <label class="form-label text-muted small fw-bold" id="labelOggetto">OGGETTO PREVENTIVO</label>
                                 <input type="text" id="oggetto" class="form-control" placeholder="es. Fornitura Arredi Sacri e Restauro">
                             </div>
                             <div class="row">
                                 <div class="col-md-4 mb-3">
-                                    <label class="form-label text-muted small fw-bold">DATA PREVENTIVO</label>
+                                    <label class="form-label text-muted small fw-bold" id="labelQuoteDate">DATA PREVENTIVO</label>
                                     <input type="text" id="quote_date" class="form-control" placeholder="es. 05/08/2026">
                                 </div>
                                 <div class="col-md-5 mb-3">
-                                    <label class="form-label text-muted small fw-bold">NUMERO PREVENTIVO</label>
+                                    <label class="form-label text-muted small fw-bold" id="labelQuoteNumber">NUMERO PREVENTIVO</label>
                                     <input type="text" id="quote_number" class="form-control" placeholder="Auto-generato se vuoto">
                                 </div>
                                 <div class="col-md-3 mb-3">
@@ -342,7 +352,7 @@
             <!-- Tabella Articoli -->
             <div class="card card-custom">
                 <div class="card-header-custom">
-                    <span><i class="bi bi-list-stars text-danger me-2"></i> Articoli del Preventivo</span>
+                    <span><i class="bi bi-list-stars text-danger me-2"></i> <span id="tableHeaderLabel">Articoli del Preventivo</span></span>
                     <div class="d-flex align-items-center gap-3">
                         <div class="form-check form-switch mb-0">
                             <input class="form-check-input" type="checkbox" id="showVatCheckbox" checked onchange="toggleVatColumn()">
@@ -715,6 +725,52 @@
 
 
     // --- QUOTE FORM & ITEMS MANAGEMENT ---
+    let currentDocType = 'preventivo';
+
+    function setDocType(type) {
+        currentDocType = (type === 'pagamento') ? 'pagamento' : 'preventivo';
+        const isPag = currentDocType === 'pagamento';
+        const typeLabel = isPag ? 'Pagamento' : 'Preventivo';
+        
+        const prevRadio = document.getElementById('docTypePrev');
+        const pagRadio = document.getElementById('docTypePag');
+        if (prevRadio && pagRadio) {
+            prevRadio.checked = !isPag;
+            pagRadio.checked = isPag;
+        }
+
+        const docTypeTitle = document.getElementById('docTypeTitle');
+        if (docTypeTitle) docTypeTitle.innerText = `Dati ${typeLabel}`;
+
+        const docTypeIcon = document.getElementById('docTypeIcon');
+        if (docTypeIcon) {
+            docTypeIcon.className = isPag ? 'bi bi-credit-card text-danger me-2' : 'bi bi-file-earmark-text text-danger me-2';
+        }
+
+        const labelOggetto = document.getElementById('labelOggetto');
+        if (labelOggetto) labelOggetto.innerText = `OGGETTO ${typeLabel.toUpperCase()}`;
+
+        const labelQuoteDate = document.getElementById('labelQuoteDate');
+        if (labelQuoteDate) labelQuoteDate.innerText = `DATA ${typeLabel.toUpperCase()}`;
+
+        const labelQuoteNumber = document.getElementById('labelQuoteNumber');
+        if (labelQuoteNumber) labelQuoteNumber.innerText = `NUMERO ${typeLabel.toUpperCase()}`;
+
+        const tableHeaderLabel = document.getElementById('tableHeaderLabel');
+        if (tableHeaderLabel) tableHeaderLabel.innerText = `Articoli del ${typeLabel}`;
+
+        // Automatically update prefix if starting with PREV- or PAG-
+        const qNumInput = document.getElementById('quote_number');
+        if (qNumInput && qNumInput.value.trim()) {
+            const val = qNumInput.value.trim();
+            if (isPag && val.toUpperCase().startsWith('PREV')) {
+                qNumInput.value = 'PAG' + val.substring(4);
+            } else if (!isPag && val.toUpperCase().startsWith('PAG')) {
+                qNumInput.value = 'PREV' + val.substring(3);
+            }
+        }
+    }
+
     function toggleVatColumn() {
         const show = document.getElementById('showVatCheckbox').checked;
         document.querySelectorAll('.vat-col').forEach(el => {
@@ -768,6 +824,7 @@
     }
 
     function resetQuoteForm() {
+        setDocType('preventivo');
         clearCustomerFields();
         document.getElementById('oggetto').value = '';
         document.getElementById('quote_number').value = '';
@@ -1031,10 +1088,13 @@
         }
 
         const versionVal = parseInt(document.getElementById('quote_version').value);
+        const filePrefix = currentDocType === 'pagamento' ? 'pagamento' : 'preventivo';
         const payload = {
             quote_number: document.getElementById('quote_number').value.trim(),
             version: isNaN(versionVal) ? null : versionVal,
+            doc_type: currentDocType,
             data: {
+                doc_type: currentDocType,
                 customer_name: document.getElementById('customer_name').value.trim(),
                 customer_address: document.getElementById('customer_address').value.trim(),
                 contact_person: document.getElementById('contact_person').value.trim(),
@@ -1068,7 +1128,7 @@
                     } else {
                         const a = document.createElement('a');
                         a.href = url;
-                        a.download = `preventivo_${payload.quote_number || 'pdf'}.pdf`;
+                        a.download = `${filePrefix}_${payload.quote_number || 'pdf'}.pdf`;
                         document.body.appendChild(a);
                         a.click();
                         a.remove();
@@ -1089,7 +1149,7 @@
                 await generateClientPdf(payload.data, payload.items, companyData, {
                     preview: preview,
                     download: !preview,
-                    filename: `preventivo_${payload.quote_number || 'offline'}.pdf`
+                    filename: `${filePrefix}_${payload.quote_number || 'offline'}.pdf`
                 });
 
                 // Compute total amount string for local archive display
@@ -1105,6 +1165,7 @@
                     id: localId,
                     quote_number: payload.quote_number || `OFF-${localId}`,
                     version: payload.version || 1,
+                    doc_type: currentDocType,
                     customer_name: payload.data.customer_name || '',
                     customer_address: payload.data.customer_address || '',
                     contact_person: payload.data.contact_person || '',
@@ -1230,10 +1291,12 @@
         const newVer = maxV + 1;
 
         const localId = Date.now();
+        const docT = quote.doc_type || (quote.quote_number && quote.quote_number.toUpperCase().startsWith('PAG') ? 'pagamento' : 'preventivo');
         const newQuote = {
             id: localId,
             quote_number: quote.quote_number,
             version: newVer,
+            doc_type: docT,
             customer_name: quote.customer_name,
             customer_address: quote.customer_address,
             contact_person: quote.contact_person,
@@ -1278,9 +1341,13 @@
         }
 
         if (!quote) {
-            alert("Impossibile caricare il preventivo per la modifica.");
+            alert("Impossibile caricare il documento per la modifica.");
             return;
         }
+
+        // Set doc type
+        const docT = quote.doc_type || (quote.quote_number && quote.quote_number.toUpperCase().startsWith('PAG') ? 'pagamento' : 'preventivo');
+        setDocType(docT);
 
         // Fill form fields
         document.getElementById('customer_name').value = quote.customer_name || '';
@@ -1346,14 +1413,16 @@
         // Offline preview fallback!
         const quote = archivedQuotesList.find(q => q.id === quoteId) || (await dbGetQuotes()).find(q => q.id === quoteId);
         if (!quote) {
-            alert("Preventivo non trovato nei dati locali.");
+            alert("Documento non trovato nei dati locali.");
             return;
         }
 
         const items = typeof quote.items_json === 'string' ? JSON.parse(quote.items_json) : (quote.items || []);
         const companyData = currentUser?.company || await dbGetCompany() || {};
+        const docT = quote.doc_type || (quote.quote_number && quote.quote_number.toUpperCase().startsWith('PAG') ? 'pagamento' : 'preventivo');
 
         generateClientPdf({
+            doc_type: docT,
             quote_number: quote.quote_number,
             version: quote.version,
             customer_name: quote.customer_name,
@@ -1367,6 +1436,10 @@
     }
 
     async function downloadArchivedPdf(quoteId, number) {
+        const quote = archivedQuotesList.find(q => q.id === quoteId) || (await dbGetQuotes()).find(q => q.id === quoteId);
+        const docT = (quote && quote.doc_type) ? quote.doc_type : (String(number).toUpperCase().startsWith('PAG') ? 'pagamento' : 'preventivo');
+        const filePrefix = docT === 'pagamento' ? 'pagamento' : 'preventivo';
+
         if (navigator.onLine) {
             try {
                 const response = await fetch(`/api/quotes/${quoteId}/download`, {
@@ -1378,7 +1451,7 @@
                     const url = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `preventivo_${number}.pdf`;
+                    a.download = `${filePrefix}_${number}.pdf`;
                     document.body.appendChild(a);
                     a.click();
                     a.remove();
@@ -1390,9 +1463,8 @@
         }
 
         // Offline download fallback!
-        const quote = archivedQuotesList.find(q => q.id === quoteId) || (await dbGetQuotes()).find(q => q.id === quoteId);
         if (!quote) {
-            alert("Preventivo non trovato nei dati locali.");
+            alert("Documento non trovato nei dati locali.");
             return;
         }
 
@@ -1400,6 +1472,7 @@
         const companyData = currentUser?.company || await dbGetCompany() || {};
 
         generateClientPdf({
+            doc_type: docT,
             quote_number: quote.quote_number,
             version: quote.version,
             customer_name: quote.customer_name,
@@ -1409,7 +1482,7 @@
             quote_date: quote.quote_date,
             final_notes: quote.final_notes,
             show_vat: quote.show_vat !== undefined ? Boolean(quote.show_vat) : true
-        }, items, companyData, { download: true, filename: `preventivo_${number}.pdf` });
+        }, items, companyData, { download: true, filename: `${filePrefix}_${number}.pdf` });
     }
 
     async function deleteArchivedQuote(quoteId) {

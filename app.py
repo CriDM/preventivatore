@@ -420,11 +420,14 @@ async def generate_pdf_endpoint(
                 f.write(company.logo_data)
             payload.data.logo_path = temp_logo_path
 
+        doc_type = (payload.data.doc_type or getattr(payload, "doc_type", None) or ("pagamento" if (payload.quote_number and payload.quote_number.startswith("PAG")) else "preventivo")).lower()
+
         # Generate quote number if empty
         if not payload.quote_number:
             count = db.query(Quote).filter(Quote.company_id == (user.company_id or 1)).count() + 1
             year = datetime.now().strftime("%Y")
-            payload.quote_number = f"PREV-{year}-{count:04d}"
+            code_prefix = "PAG" if doc_type == "pagamento" else "PREV"
+            payload.quote_number = f"{code_prefix}-{year}-{count:04d}"
 
         # Create temporary file for PDF
         fd, temp_pdf_path = tempfile.mkstemp(suffix=".pdf")
@@ -456,6 +459,7 @@ async def generate_pdf_endpoint(
 
         data_dict["quote_number"] = payload.quote_number
         data_dict["version"] = quote_version
+        data_dict["doc_type"] = doc_type
         data_dict["show_vat"] = payload.data.show_vat if payload.data.show_vat is not None else True
 
         # Generate PDF with ReportLab
@@ -480,6 +484,7 @@ async def generate_pdf_endpoint(
                 user_id=user.id,
                 quote_number=payload.quote_number,
                 version=quote_version,
+                doc_type=doc_type,
                 customer_name=payload.data.customer_name or "",
                 customer_address=payload.data.customer_address or "",
                 contact_person=payload.data.contact_person or "",
@@ -502,7 +507,8 @@ async def generate_pdf_endpoint(
         if temp_logo_path and os.path.exists(temp_logo_path):
             os.remove(temp_logo_path)
 
-        filename = f"preventivo_{payload.quote_number}_v{quote_version}.pdf"
+        file_prefix = "pagamento" if doc_type == "pagamento" else "preventivo"
+        filename = f"{file_prefix}_{payload.quote_number}_v{quote_version}.pdf"
         return Response(
             content=pdf_bytes,
             media_type="application/pdf",
@@ -565,6 +571,7 @@ async def download_archived_quote_pdf(
         "email": company.email if company else "",
         "phone": company.phone if company else "",
         "logo_path": temp_logo_path or "",
+        "doc_type": getattr(quote, "doc_type", "preventivo") or ("pagamento" if str(quote.quote_number).startswith("PAG") else "preventivo"),
         "quote_date": quote.quote_date,
         "customer_name": quote.customer_name,
         "customer_address": quote.customer_address,
@@ -589,7 +596,9 @@ async def download_archived_quote_pdf(
     if temp_logo_path and os.path.exists(temp_logo_path):
         os.remove(temp_logo_path)
 
-    filename = f"preventivo_{quote.quote_number}.pdf"
+    doc_t = getattr(quote, "doc_type", "preventivo") or ("pagamento" if str(quote.quote_number).startswith("PAG") else "preventivo")
+    file_prefix = "pagamento" if doc_t == "pagamento" else "preventivo"
+    filename = f"{file_prefix}_{quote.quote_number}.pdf"
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
@@ -613,6 +622,7 @@ async def get_quote_details(quote_id: int, user: User = Depends(get_current_user
         "user_id": quote.user_id,
         "quote_number": quote.quote_number,
         "version": quote.version or 1,
+        "doc_type": getattr(quote, "doc_type", "preventivo") or ("pagamento" if str(quote.quote_number).startswith("PAG") else "preventivo"),
         "customer_name": quote.customer_name,
         "customer_address": quote.customer_address,
         "contact_person": quote.contact_person,
@@ -648,6 +658,7 @@ async def create_new_quote_version(quote_id: int, user: User = Depends(get_curre
         user_id=user.id,
         quote_number=original_quote.quote_number,
         version=new_version,
+        doc_type=getattr(original_quote, "doc_type", "preventivo") or ("pagamento" if str(original_quote.quote_number).startswith("PAG") else "preventivo"),
         customer_name=original_quote.customer_name,
         customer_address=original_quote.customer_address,
         contact_person=original_quote.contact_person,

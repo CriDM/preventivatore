@@ -120,11 +120,13 @@ class QuoteData(BaseModel):
     oggetto: Optional[str] = ""
     final_notes: Optional[str] = ""
     show_vat: Optional[bool] = True
+    doc_type: Optional[str] = "preventivo"
 
 
 class QuotePayload(BaseModel):
     quote_number: Optional[str] = ""
     version: Optional[int] = None
+    doc_type: Optional[str] = None
     data: QuoteData
     items: List[QuoteItem]
 
@@ -135,6 +137,7 @@ class QuoteResponse(BaseModel):
     user_id: Optional[int] = None
     quote_number: Optional[str] = ""
     version: Optional[int] = 1
+    doc_type: Optional[str] = "preventivo"
     customer_name: Optional[str] = ""
     customer_address: Optional[str] = ""
     contact_person: Optional[str] = ""

@@ -64,6 +64,8 @@ class PreventivoApp:
         self.woo_products = storage.load_woo_products()
         self.show_vat_var = tk.BooleanVar(value=self.settings.get("show_vat", True))
         self.show_vat_var.trace_add("write", self._save_draft)
+        self.doc_type_var = tk.StringVar(value="preventivo")
+        self.doc_type_var.trace_add("write", self._save_draft)
 
         self._build_header()
         
@@ -91,6 +93,8 @@ class PreventivoApp:
         if getattr(self, "_loading_draft", False):
             return
         payload = {
+            "doc_type": self.doc_type_var.get() if hasattr(self, "doc_type_var") else "preventivo",
+            "quote_number": self.quote_number_var.get() if hasattr(self, "quote_number_var") else "",
             "customer": {
                 "name": self.customer_name_var.get(),
                 "address": self.customer_address_var.get(),
@@ -237,6 +241,16 @@ del "%~f0"
                     import json
                     with open(draft_file, "r", encoding="utf-8") as f:
                         payload = json.load(f)
+
+                    doc_t = payload.get("doc_type", "preventivo")
+                    self.doc_type_var.set(doc_t)
+                    doc_label = "Pagamento" if doc_t == "pagamento" else "Preventivo"
+                    if hasattr(self, "doc_type_segmented"):
+                        self.doc_type_segmented.set(doc_label)
+                    self._on_doc_type_change(doc_label)
+
+                    if payload.get("quote_number"):
+                        self.quote_number_var.set(payload["quote_number"])
 
                     cust = payload.get("customer", {})
                     self.customer_name_var.set(cust.get("name", ""))
@@ -537,21 +551,70 @@ del "%~f0"
 
     def increment_quote_number(self):
         current = self.quote_number_var.get().strip()
-        try:
-            new_num = int(current) + 1
-            self.quote_number_var.set(str(new_num))
-            self.settings["quote_number"] = str(new_num)
+        import re
+        match = re.match(r'^(.*?)(\d+)$', current)
+        if match:
+            prefix, num_str = match.groups()
+            new_num = int(num_str) + 1
+            new_val = f"{prefix}{new_num:0{len(num_str)}d}" if len(num_str) > 1 else f"{prefix}{new_num}"
+            self.quote_number_var.set(new_val)
+            self.settings["quote_number"] = new_val
             self._save_settings()
-        except ValueError:
-            self.settings["quote_number"] = current
-            self._save_settings()
-            messagebox.showinfo("Salvato", "Formato testo salvato come predefinito.")
+        else:
+            try:
+                new_num = int(current) + 1
+                self.quote_number_var.set(str(new_num))
+                self.settings["quote_number"] = str(new_num)
+                self._save_settings()
+            except ValueError:
+                self.settings["quote_number"] = current
+                self._save_settings()
+                messagebox.showinfo("Salvato", "Formato testo salvato come predefinito.")
+
+    def _on_doc_type_change(self, value: str) -> None:
+        is_pag = (str(value).strip().lower() == "pagamento")
+        doc_type_val = "pagamento" if is_pag else "preventivo"
+        self.doc_type_var.set(doc_type_val)
+        
+        title_text = "Pagamento" if is_pag else "Preventivo"
+        if hasattr(self, "header_title_label"):
+            self.header_title_label.configure(text=f"Compilazione Nuovo {title_text}")
+        if hasattr(self, "quote_num_label"):
+            self.quote_num_label.configure(text=f"Num. {title_text}:")
+        if hasattr(self, "oggetto_label"):
+            self.oggetto_label.configure(text=f"Oggetto {title_text}:")
+
+        # Automatically update code prefix if applicable (PREV <-> PAG)
+        current_num = self.quote_number_var.get().strip() if hasattr(self, "quote_number_var") else ""
+        if current_num:
+            if is_pag and current_num.upper().startswith("PREV"):
+                self.quote_number_var.set("PAG" + current_num[4:])
+            elif not is_pag and current_num.upper().startswith("PAG"):
+                self.quote_number_var.set("PREV" + current_num[3:])
+
+        self._save_draft()
 
     def _build_header(self) -> None:
         header_frame = ctk.CTkFrame(self.root, fg_color="transparent")
         header_frame.pack(fill="x", padx=12, pady=(12, 0))
         
-        ctk.CTkLabel(header_frame, text="Compilazione Nuovo Preventivo", font=ctk.CTkFont(family="Helvetica", size=18, weight="bold")).pack(side="left")
+        self.header_title_label = ctk.CTkLabel(
+            header_frame, 
+            text="Compilazione Nuovo Preventivo", 
+            font=ctk.CTkFont(family="Helvetica", size=18, weight="bold")
+        )
+        self.header_title_label.pack(side="left")
+
+        # Scelta Tipo Documento: Preventivo / Pagamento
+        self.doc_type_segmented = ctk.CTkSegmentedButton(
+            header_frame,
+            values=["Preventivo", "Pagamento"],
+            command=self._on_doc_type_change,
+            font=ctk.CTkFont(family="Helvetica", size=13, weight="bold")
+        )
+        self.doc_type_segmented.set("Preventivo")
+        self.doc_type_segmented.pack(side="left", padx=20)
+        
         ctk.CTkButton(header_frame, text="⚙️ Impostazioni Azienda", command=self.open_settings_dialog).pack(side="right")
 
     def _build_client_section(self) -> None:
@@ -582,8 +645,9 @@ del "%~f0"
         self.quote_date_var.trace_add("write", self._save_draft)
 
 
-        # Riga 1: N. Preventivo e Data
-        ctk.CTkLabel(frame, text="Num. Preventivo:").grid(row=0, column=0, sticky="w", padx=(0, 5), pady=4)
+        # Riga 1: N. Preventivo / Pagamento e Data
+        self.quote_num_label = ctk.CTkLabel(frame, text="Num. Preventivo:")
+        self.quote_num_label.grid(row=0, column=0, sticky="w", padx=(0, 5), pady=4)
         num_frame = ctk.CTkFrame(frame, fg_color="transparent")
         num_frame.grid(row=0, column=1, sticky="w", padx=(0, 15), pady=4)
         ctk.CTkEntry(num_frame, textvariable=self.quote_number_var, width=100).pack(side="left")
@@ -609,7 +673,8 @@ del "%~f0"
         ctk.CTkLabel(frame, text="Referente/Parroco:").grid(row=2, column=0, sticky="w", padx=(0, 5), pady=4)
         ctk.CTkEntry(frame, textvariable=self.contact_person_var, width=350).grid(row=2, column=1, sticky="ew", padx=(0, 15), pady=4)
 
-        ctk.CTkLabel(frame, text="Oggetto Preventivo:").grid(row=2, column=2, sticky="w", padx=(0, 5), pady=4)
+        self.oggetto_label = ctk.CTkLabel(frame, text="Oggetto Preventivo:")
+        self.oggetto_label.grid(row=2, column=2, sticky="w", padx=(0, 5), pady=4)
         ctk.CTkEntry(frame, textvariable=self.oggetto_var, width=350).grid(row=2, column=3, sticky="ew", pady=4)
 
         # Riga 4: Note finali
@@ -996,6 +1061,10 @@ del "%~f0"
     def new_project(self) -> None:
         if not messagebox.askyesno("Nuovo", "Svuotare tutti i dati del cliente e della tabella?"):
             return
+        self.doc_type_var.set("preventivo")
+        if hasattr(self, "doc_type_segmented"):
+            self.doc_type_segmented.set("Preventivo")
+        self._on_doc_type_change("Preventivo")
         self.quote_date_var.set(str(date.today().strftime("%d/%m/%Y")))
         self.customer_name_var.set("")
         self.customer_address_var.set("")
@@ -1024,6 +1093,8 @@ del "%~f0"
         path = filedialog.asksaveasfilename(defaultextension=".pquote", filetypes=[("Progetto Preventivatore", "*.pquote")])
         if not path: return
         payload = {
+            "doc_type": self.doc_type_var.get(),
+            "quote_number": self.quote_number_var.get(),
             "customer": {
                 "name": self.customer_name_var.get(),
                 "address": self.customer_address_var.get(),
@@ -1070,13 +1141,23 @@ del "%~f0"
 
         tree.bind("<Double-1>", on_double_click)
 
-        ctk.CTkLabel(archive_win, text="Doppio clic su un preventivo per caricarlo.").pack(pady=(0,10))
+        ctk.CTkLabel(archive_win, text="Doppio clic su un documento per caricarlo.").pack(pady=(0,10))
 
     def _load_from_filepath(self, filepath: str):
         payload = storage.load_local_quote(filepath)
         if not payload:
             messagebox.showerror("Errore", "Impossibile caricare il file.")
             return
+
+        doc_t = payload.get("doc_type", "preventivo")
+        self.doc_type_var.set(doc_t)
+        doc_label = "Pagamento" if doc_t == "pagamento" else "Preventivo"
+        if hasattr(self, "doc_type_segmented"):
+            self.doc_type_segmented.set(doc_label)
+        self._on_doc_type_change(doc_label)
+
+        if payload.get("quote_number"):
+            self.quote_number_var.set(payload["quote_number"])
 
         cust = payload.get("customer", {})
         self.customer_name_var.set(cust.get("name", ""))
@@ -1109,6 +1190,16 @@ del "%~f0"
         with open(path, "r", encoding="utf-8") as fp:
             payload = json.load(fp)
         
+        doc_t = payload.get("doc_type", "preventivo")
+        self.doc_type_var.set(doc_t)
+        doc_label = "Pagamento" if doc_t == "pagamento" else "Preventivo"
+        if hasattr(self, "doc_type_segmented"):
+            self.doc_type_segmented.set(doc_label)
+        self._on_doc_type_change(doc_label)
+
+        if payload.get("quote_number"):
+            self.quote_number_var.set(payload["quote_number"])
+
         cust = payload.get("customer", {})
         self.customer_name_var.set(cust.get("name", ""))
         self.customer_address_var.set(cust.get("address", ""))
@@ -1143,7 +1234,7 @@ del "%~f0"
             "email": self.settings.get("email", ""),
             "phone": self.settings.get("phone", ""),
             "logo_path": self.settings.get("logo_path", ""),
-            
+            "doc_type": self.doc_type_var.get(),
             "quote_number": self.quote_number_var.get(),
             "quote_date": self.quote_date_var.get(),
             "customer_name": self.customer_name_var.get(),
@@ -1191,7 +1282,8 @@ del "%~f0"
         )
         self._refresh_customer_combo()
 
-        out_name = f"Preventivo_{self.quote_number_var.get()}_{self.customer_name_var.get().replace(' ','_')}.pdf"
+        doc_prefix = "Pagamento" if self.doc_type_var.get() == "pagamento" else "Preventivo"
+        out_name = f"{doc_prefix}_{self.quote_number_var.get()}_{self.customer_name_var.get().replace(' ','_')}.pdf"
         file_path = filedialog.asksaveasfilename(defaultextension=".pdf", initialfile=out_name, filetypes=[("PDF", "*.pdf")])
         if not file_path: return
 
@@ -1200,6 +1292,8 @@ del "%~f0"
 
             # Salva una copia nel database locale
             payload = {
+                "doc_type": self.doc_type_var.get(),
+                "quote_number": self.quote_number_var.get(),
                 "customer": {
                     "name": self.customer_name_var.get(),
                     "address": self.customer_address_var.get(),

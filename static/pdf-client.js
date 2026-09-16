@@ -89,9 +89,11 @@ async function generateClientPdf(data, items, company, options = {}) {
   y += 7;
 
   // 3. Document Title & Date
+  const docType = String(data.doc_type || (data.quote_number && data.quote_number.toUpperCase().startsWith('PAG') ? 'pagamento' : 'preventivo')).toLowerCase();
+  const docTitle = docType === 'pagamento' ? 'PAGAMENTO' : 'PREVENTIVO';
   const quoteNum = data.quote_number || 'BOZZA';
   const ver = data.version ? ` v${data.version}` : '';
-  const titleText = `PREVENTIVO N. ${quoteNum}${ver}`;
+  const titleText = `${docTitle} N. ${quoteNum}${ver}`;
 
   doc.setFont('Helvetica', 'bold');
   doc.setFontSize(16);

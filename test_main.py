@@ -75,3 +75,35 @@ def test_generate_quote_pdf_with_and_without_vat(tmp_path):
         assert "200,00" in text2
     except ImportError:
         pass
+
+
+def test_generate_pdf_doc_type_pagamento(tmp_path):
+    from pdf_generator import generate_quote_pdf
+    items = [
+        {
+            "name": "Acconto Lavori",
+            "quantity": Decimal("1"),
+            "unit_price": Decimal("500.00"),
+            "total": Decimal("500.00"),
+            "vat_percent": Decimal("22"),
+            "total_with_vat": Decimal("610.00")
+        }
+    ]
+    data_pagamento = {
+        "company_name": "Test SRL",
+        "quote_number": "PAG-2026-0001",
+        "doc_type": "pagamento",
+        "show_vat": True
+    }
+    pdf_pag = tmp_path / "pagamento.pdf"
+    generate_quote_pdf(items, data_pagamento, str(pdf_pag))
+    assert pdf_pag.exists() and pdf_pag.stat().st_size > 0
+
+    try:
+        import pypdf
+        reader = pypdf.PdfReader(str(pdf_pag))
+        text = reader.pages[0].extract_text()
+        assert "PAGAMENTO" in text
+        assert "Dettaglio Pagamento" in text
+    except ImportError:
+        pass

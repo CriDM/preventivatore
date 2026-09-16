@@ -80,6 +80,7 @@ class Quote(Base):
     final_notes = Column(Text, default="")
     items_json = Column(Text, default="[]")
     version = Column(Integer, default=1)
+    doc_type = Column(String, default="preventivo")
     show_vat = Column(Integer, default=1)
     total_amount = Column(String, default="0.00")
     created_at = Column(String, default="")

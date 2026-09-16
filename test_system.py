@@ -262,3 +262,35 @@ def test_customer_management_and_quote(client):
     assert quote_details_resp.status_code == 200
     assert quote_details_resp.json()["version"] == 3
     assert len(quote_details_resp.json()["items"]) == 1
+
+    # Test Pagamento document generation and auto-generated PAG code
+    pag_payload = {
+        "doc_type": "pagamento",
+        "data": {
+            "doc_type": "pagamento",
+            "customer_name": "Parrocchia San Paolo",
+            "customer_address": "Piazza Duomo 1",
+            "contact_person": "Don Andrea",
+            "oggetto": "Pagamento Acconto Restauro",
+            "quote_date": "16/09/2026",
+            "final_notes": "Ricevuta di pagamento."
+        },
+        "items": [
+            {
+                "name": "Acconto restauro altare",
+                "quantity": 1,
+                "unit_price": 1000.0,
+                "total": 1000.0,
+                "vat_percent": 22.0,
+                "total_with_vat": 1220.0
+            }
+        ]
+    }
+    pag_resp = client.post("/api/quotes/generate-pdf", headers=headers, json=pag_payload)
+    assert pag_resp.status_code == 200
+    assert "attachment; filename=\"pagamento_PAG-" in pag_resp.headers["content-disposition"]
+
+    archive_pag = client.get("/api/quotes", headers=headers).json()
+    saved_pag = next(q for q in archive_pag if q["customer_name"] == "Parrocchia San Paolo")
+    assert saved_pag["doc_type"] == "pagamento"
+    assert saved_pag["quote_number"].startswith("PAG-")

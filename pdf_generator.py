@@ -104,10 +104,15 @@ def generate_quote_pdf(items: List[Dict], data: Dict, output_path: str) -> str:
     
     story.append(Spacer(1, 12 * mm))
 
-    # 2. TITOLO "PREVENTIVO" CENTRATO IN ROSSO CON DATA A DESTRA
+    # 2. TITOLO "PREVENTIVO" o "PAGAMENTO" CENTRATO IN ROSSO CON DATA A DESTRA
     q_num = data.get("quote_number", "")
     q_ver = data.get("version", 1)
-    title_text = "PREVENTIVO"
+    doc_type = str(data.get("doc_type", "")).strip().lower()
+    if not doc_type:
+        doc_type = "pagamento" if str(q_num).upper().startswith("PAG") else "preventivo"
+    
+    title_prefix = "PAGAMENTO" if doc_type == "pagamento" else "PREVENTIVO"
+    title_text = title_prefix
     if q_num:
         title_text += f" N. {q_num}"
     if q_ver and int(q_ver) > 1:
@@ -118,7 +123,7 @@ def generate_quote_pdf(items: List[Dict], data: Dict, output_path: str) -> str:
     ], colWidths=[140 * mm, 40 * mm])
     header_table.setStyle(TableStyle([
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("ALIGN", (0, 0), (0, 0), "LEFT"),  # Centra PREVENTIVO
+        ("ALIGN", (0, 0), (0, 0), "LEFT"),  # Centra PREVENTIVO / PAGAMENTO
         ("ALIGN", (1, 0), (1, 0), "RIGHT"),   # Destra per la data
         ("LEFTPADDING", (0, 0), (0, 0), 0),
         ("RIGHTPADDING", (1, 0), (1, 0), 0),
@@ -155,7 +160,8 @@ def generate_quote_pdf(items: List[Dict], data: Dict, output_path: str) -> str:
         story.append(Spacer(1, 6 * mm))
 
     # 5. INTESTAZIONE TABELLA IN ROSSO
-    story.append(Paragraph("<b>Dettaglio Preventivo</b>", section_red))
+    detail_heading = "Dettaglio Pagamento" if doc_type == "pagamento" else "Dettaglio Preventivo"
+    story.append(Paragraph(f"<b>{detail_heading}</b>", section_red))
     story.append(Spacer(1, 3 * mm))
 
     # 6. TABELLA ARTICOLI con righe alternate
