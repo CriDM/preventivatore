@@ -100,6 +100,110 @@ async def service_worker():
 
 
 
+try:
+    from version import __version__
+except ImportError:
+    __version__ = "1.0.2"
+
+import time
+
+APP_START_TIME = datetime.utcnow()
+
+def check_system_health() -> tuple[dict, int]:
+    """
+    Performs a safe, non-sensitive system health check for monitoring (e.g. Uptime Kuma, K8s, Docker).
+    No credentials, secrets, private IPs, or internal filesystem paths are exposed.
+    """
+    # 1. Database check
+    t0 = time.perf_counter()
+    db_ok = False
+    db_latency_ms = None
+    try:
+        from sqlalchemy import text
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        db_latency_ms = round((time.perf_counter() - t0) * 1000, 2)
+        db_ok = True
+    except Exception:
+        db_ok = False
+
+    dialect_name = engine.dialect.name if hasattr(engine, "dialect") and engine.dialect else "database"
+
+    # 2. Storage / Filesystem check
+    storage_ok = False
+    try:
+        from storage import get_base_dir
+        base_dir = get_base_dir()
+        probe_file = base_dir / ".health_probe"
+        probe_file.write_text("ok", encoding="utf-8")
+        if probe_file.read_text(encoding="utf-8") == "ok":
+            probe_file.unlink(missing_ok=True)
+            storage_ok = True
+    except Exception:
+        storage_ok = False
+
+    # 3. PDF Generator check
+    pdf_ok = False
+    try:
+        import reportlab
+        pdf_ok = True
+    except Exception:
+        pdf_ok = False
+
+    # 4. WooCommerce integration check
+    woo_configured = bool(os.environ.get("WOOCOMMERCE_URL") and os.environ.get("WOOCOMMERCE_KEY"))
+
+    # 5. Calculate uptime
+    uptime_seconds = int((datetime.utcnow() - APP_START_TIME).total_seconds())
+    days, rem = divmod(uptime_seconds, 86400)
+    hours, rem = divmod(rem, 3600)
+    mins, secs = divmod(rem, 60)
+    parts = []
+    if days > 0: parts.append(f"{days}d")
+    if hours > 0: parts.append(f"{hours}h")
+    if mins > 0: parts.append(f"{mins}m")
+    parts.append(f"{secs}s")
+    uptime_human = " ".join(parts)
+
+    is_healthy = db_ok and storage_ok and pdf_ok
+    status_str = "ok" if is_healthy else ("degraded" if db_ok else "error")
+    http_code = 200 if is_healthy else 503
+
+    payload = {
+        "status": status_str,
+        "ok": is_healthy,
+        "timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "version": __version__,
+        "uptime": {
+            "seconds": uptime_seconds,
+            "human": uptime_human
+        },
+        "components": {
+            "database": {
+                "status": "ok" if db_ok else "unreachable",
+                "ok": db_ok,
+                "type": dialect_name,
+                "latency_ms": db_latency_ms
+            },
+            "storage": {
+                "status": "ok" if storage_ok else "error",
+                "ok": storage_ok,
+                "writable": storage_ok
+            },
+            "pdf_generator": {
+                "status": "ok" if pdf_ok else "unavailable",
+                "ok": pdf_ok,
+                "engine": "ReportLab"
+            },
+            "integrations": {
+                "woocommerce": {
+                    "configured": woo_configured
+                }
+            }
+        }
+    }
+    return payload, http_code
+
 # --- PAGE ROUTES ---
 @app.get("/")
 async def root():
@@ -113,10 +217,40 @@ async def login_page():
 async def admin_page():
     return FileResponse("static/admin.html")
 
-try:
-    from version import __version__
-except ImportError:
-    __version__ = "1.0.2"
+@app.get("/health")
+async def health_page(request: Request, format: Optional[str] = None):
+    accept_header = request.headers.get("accept", "")
+    user_agent = request.headers.get("user-agent", "").lower()
+    
+    # If client is a monitoring tool (Uptime Kuma, curl, etc.) or explicitly asks for json
+    is_monitor = any(bot in user_agent for bot in ["uptime", "kuma", "curl", "wget", "prometheus", "nagios", "datadog"])
+    if format == "json" or is_monitor or ("application/json" in accept_header and "text/html" not in accept_header):
+        payload, code = check_system_health()
+        return JSONResponse(content=payload, status_code=code)
+
+    if os.path.exists("static/health.html"):
+        return FileResponse("static/health.html")
+    payload, code = check_system_health()
+    return JSONResponse(content=payload, status_code=code)
+
+@app.get("/api/health")
+async def api_health():
+    """Backend JSON health check endpoint for Uptime Kuma and monitoring tools."""
+    payload, code = check_system_health()
+    return JSONResponse(content=payload, status_code=code)
+
+@app.get("/healthz", include_in_schema=False)
+@app.get("/livez", include_in_schema=False)
+@app.get("/readyz", include_in_schema=False)
+async def healthz():
+    """Kubernetes / Cloud container probe endpoint."""
+    payload, code = check_system_health()
+    return JSONResponse(content=payload, status_code=code)
+
+@app.get("/ping")
+async def ping():
+    """Fast, lightweight ping probe."""
+    return {"ping": "pong", "status": "ok", "ok": True}
 
 @app.get("/api/version")
 async def get_app_version():

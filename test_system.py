@@ -294,3 +294,55 @@ def test_customer_management_and_quote(client):
     saved_pag = next(q for q in archive_pag if q["customer_name"] == "Parrocchia San Paolo")
     assert saved_pag["doc_type"] == "pagamento"
     assert saved_pag["quote_number"].startswith("PAG-")
+
+
+def test_health_endpoints_and_uptime_kuma(client):
+    # 1. Test /api/health endpoint for Uptime Kuma / API consumers
+    resp = client.get("/api/health")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "ok"
+    assert data["ok"] is True
+    assert "version" in data
+    assert "timestamp" in data
+    assert "uptime" in data
+    assert "seconds" in data["uptime"]
+    assert "components" in data
+    assert data["components"]["database"]["ok"] is True
+    assert data["components"]["database"]["status"] == "ok"
+    assert data["components"]["storage"]["ok"] is True
+    assert data["components"]["pdf_generator"]["ok"] is True
+
+    # Check security: no passwords, secrets, or raw internal credentials exposed
+    raw_text = resp.text.lower()
+    assert "password" not in raw_text
+    assert "secret" not in raw_text
+    assert "token" not in raw_text
+    assert "jwt" not in raw_text
+
+    # 2. Test /healthz, /livez, /readyz aliases
+    for path in ["/healthz", "/livez", "/readyz"]:
+        r = client.get(path)
+        assert r.status_code == 200
+        assert r.json()["ok"] is True
+
+    # 3. Test /ping endpoint
+    ping_resp = client.get("/ping")
+    assert ping_resp.status_code == 200
+    assert ping_resp.json() == {"ping": "pong", "status": "ok", "ok": True}
+
+    # 4. Test /health page (HTML when requested by browser)
+    html_resp = client.get("/health", headers={"Accept": "text/html,application/xhtml+xml"})
+    assert html_resp.status_code == 200
+    assert "text/html" in html_resp.headers["content-type"]
+    assert "Stato del Sistema" in html_resp.text
+
+    # 5. Test /health with format=json or Uptime Kuma User-Agent
+    kuma_resp = client.get("/health", headers={"User-Agent": "Uptime-Kuma/1.23.0"})
+    assert kuma_resp.status_code == 200
+    assert kuma_resp.json()["ok"] is True
+
+    json_format_resp = client.get("/health?format=json")
+    assert json_format_resp.status_code == 200
+    assert json_format_resp.json()["ok"] is True
+

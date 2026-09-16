@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="it" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stato del Sistema - Preventivatore</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#c41e3a">
+
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('theme') || 'system';
+            let effectiveTheme = savedTheme;
+            if (savedTheme === 'system') {
+                effectiveTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            document.documentElement.setAttribute('data-bs-theme', effectiveTheme);
+        })();
+    </script>
+
+    <style>
+        :root, [data-bs-theme="light"] {
+            --primary: #c41e3a;
+            --primary-hover: #a0182e;
+            --bg-page: #f8fafc;
+            --card-bg: #ffffff;
+            --card-border: #e2e8f0;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --input-bg: #ffffff;
+            --input-border: #cbd5e1;
+            --input-color: #0f172a;
+            --code-bg: #f1f5f9;
+            --code-text: #0f172a;
+            --success-color: #16a34a;
+            --success-bg: rgba(22, 163, 74, 0.1);
+            --danger-color: #dc2626;
+            --danger-bg: rgba(220, 38, 38, 0.1);
+            --warning-color: #d97706;
+            --warning-bg: rgba(217, 119, 6, 0.1);
+        }
+
+        [data-bs-theme="dark"] {
+            --primary: #e11d48;
+            --primary-hover: #f43f5e;
+            --bg-page: #0f172a;
+            --card-bg: #1e293b;
+            --card-border: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --input-bg: #0f172a;
+            --input-border: #334155;
+            --input-color: #f8fafc;
+            --code-bg: #0b1120;
+            --code-text: #38bdf8;
+            --success-color: #22c55e;
+            --success-bg: rgba(34, 197, 94, 0.15);
+            --danger-color: #ef4444;
+            --danger-bg: rgba(239, 68, 68, 0.15);
+            --warning-color: #f59e0b;
+            --warning-bg: rgba(245, 158, 11, 0.15);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .navbar-custom {
+            background-color: var(--card-bg);
+            border-bottom: 1px solid var(--card-border);
+            padding: 12px 0;
+        }
+
+        .card-custom {
+            background-color: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .card-custom:hover {
+            box-shadow: 0 6px 24px rgba(0,0,0,0.08);
+        }
+
+        .status-hero {
+            border-radius: 16px;
+            padding: 24px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+            border: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .status-hero.healthy {
+            background-color: var(--success-bg);
+            border-color: rgba(34, 197, 94, 0.3);
+            color: var(--text-main);
+        }
+
+        .status-hero.degraded {
+            background-color: var(--warning-bg);
+            border-color: rgba(245, 158, 11, 0.3);
+            color: var(--text-main);
+        }
+
+        .status-hero.unhealthy {
+            background-color: var(--danger-bg);
+            border-color: rgba(239, 68, 68, 0.3);
+            color: var(--text-main);
+        }
+
+        .pulse-indicator {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 10px;
+            position: relative;
+        }
+
+        .pulse-indicator.healthy {
+            background-color: var(--success-color);
+            box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+            animation: pulse-green 2s infinite;
+        }
+
+        .pulse-indicator.degraded {
+            background-color: var(--warning-color);
+            box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+            animation: pulse-amber 2s infinite;
+        }
+
+        .pulse-indicator.unhealthy {
+            background-color: var(--danger-color);
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            animation: pulse-red 2s infinite;
+        }
+
+        @keyframes pulse-green {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+
+        @keyframes pulse-amber {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+        }
+
+        @keyframes pulse-red {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        .component-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            background-color: rgba(196, 30, 58, 0.08);
+            color: var(--primary);
+        }
+
+        [data-bs-theme="dark"] .component-icon {
+            background-color: rgba(225, 29, 72, 0.15);
+        }
+
+        .badge-status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .badge-healthy {
+            background-color: var(--success-bg);
+            color: var(--success-color);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .badge-unhealthy {
+            background-color: var(--danger-bg);
+            color: var(--danger-color);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .badge-neutral {
+            background-color: rgba(100, 116, 139, 0.1);
+            color: var(--text-muted);
+            border: 1px solid var(--card-border);
+        }
+
+        .code-box {
+            font-family: 'JetBrains Mono', monospace;
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 16px;
+            font-size: 13px;
+            max-height: 280px;
+            overflow: auto;
+        }
+
+        .auto-refresh-bar {
+            height: 3px;
+            background-color: var(--primary);
+            width: 100%;
+            transition: width 1s linear;
+        }
+
+        .btn-custom-outline {
+            color: var(--text-main);
+            border: 1px solid var(--card-border);
+            background: transparent;
+        }
+
+        .btn-custom-outline:hover {
+            background-color: var(--input-border);
+            color: var(--text-main);
+        }
+
+        footer {
+            margin-top: auto;
+            border-top: 1px solid var(--card-border);
+            padding: 20px 0;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand navbar-custom">
+    <div class="container">
+        <a class="navbar-brand d-flex align-items-center fw-bold gap-2" href="/" style="color: var(--text-main); text-decoration: none;">
+            <img src="/static/logo.png" alt="Logo" style="height: 34px; width: 34px; object-fit: contain; border-radius: 8px;">
+            <span class="fs-6 fw-semibold">Preventivatore</span>
+            <span class="badge bg-secondary-subtle text-secondary-emphasis rounded-pill ms-1" style="font-size: 11px;">Status</span>
+        </a>
+
+        <div class="d-flex align-items-center gap-2 ms-auto">
+            <!-- Theme Toggle -->
+            <div class="dropdown">
+                <button class="btn btn-custom-outline btn-sm dropdown-toggle d-flex align-items-center" type="button" id="themeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <span id="themeDropdownLabel"><i class="bi bi-display me-1"></i> Sistema</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="themeDropdown">
+                    <li><button class="dropdown-item d-flex align-items-center" onclick="setTheme('system')"><i class="bi bi-display me-2"></i> Sistema</button></li>
+                    <li><button class="dropdown-item d-flex align-items-center" onclick="setTheme('light')"><i class="bi bi-sun-fill me-2 text-warning"></i> Chiaro</button></li>
+                    <li><button class="dropdown-item d-flex align-items-center" onclick="setTheme('dark')"><i class="bi bi-moon-stars-fill me-2 text-primary"></i> Scuro</button></li>
+                </ul>
+            </div>
+
+            <a href="/" class="btn btn-outline-primary btn-sm d-none d-sm-inline-flex align-items-center">
+                <i class="bi bi-arrow-left me-1"></i> Torna all'App
+            </a>
+        </div>
+    </div>
+</nav>
+
+<div class="container my-4">
+    <!-- Main Hero Banner -->
+    <div id="statusHero" class="status-hero healthy shadow-sm">
+        <div class="d-flex align-items-center">
+            <span id="pulseIndicator" class="pulse-indicator healthy"></span>
+            <div>
+                <h4 id="statusTitle" class="fw-bold mb-1">Tutti i sistemi sono operativi</h4>
+                <div class="text-muted small d-flex flex-wrap align-items-center gap-3">
+                    <span><i class="bi bi-clock me-1"></i> Ultimo controllo: <strong id="lastCheckedText">Verifica in corso...</strong></span>
+                    <span><i class="bi bi-arrow-repeat me-1"></i> Aggiornamento automatico: <strong id="autoRefreshStatus">10s</strong></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex align-items-center gap-2 mt-3 mt-md-0">
+            <button id="btnRefresh" class="btn btn-custom-outline btn-sm px-3" onclick="checkHealth()">
+                <i id="refreshIcon" class="bi bi-arrow-clockwise me-1"></i> Aggiorna
+            </button>
+        </div>
+    </div>
+
+    <!-- Component Cards Grid -->
+    <div class="row g-3 mb-4">
+        <!-- Database -->
+        <div class="col-md-6 col-lg-3">
+            <div class="card card-custom h-100 p-3">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div class="component-icon">
+                        <i class="bi bi-database-check"></i>
+                    </div>
+                    <span id="dbBadge" class="badge-status badge-healthy">
+                        <i class="bi bi-check-circle-fill"></i> Connesso
+                    </span>
+                </div>
+                <h6 class="fw-semibold mb-1">Database</h6>
+                <div class="text-muted small mb-2" id="dbType">Tipo: Rilevamento...</div>
+                <div class="small fw-medium mt-auto pt-2 border-top border-secondary-subtle d-flex justify-content-between">
+                    <span class="text-muted">Latenza:</span>
+                    <span id="dbLatency" class="fw-bold">-</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Storage -->
+        <div class="col-md-6 col-lg-3">
+            <div class="card card-custom h-100 p-3">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div class="component-icon">
+                        <i class="bi bi-hdd-network"></i>
+                    </div>
+                    <span id="storageBadge" class="badge-status badge-healthy">
+                        <i class="bi bi-check-circle-fill"></i> Operativo
+                    </span>
+                </div>
+                <h6 class="fw-semibold mb-1">Storage & Filesystem</h6>
+                <div class="text-muted small mb-2" id="storageStatusText">Permessi I/O: Lettura & Scrittura</div>
+                <div class="small fw-medium mt-auto pt-2 border-top border-secondary-subtle d-flex justify-content-between">
+                    <span class="text-muted">Stato disco:</span>
+                    <span id="storageState" class="fw-bold text-success">Accessibile</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- PDF Engine -->
+        <div class="col-md-6 col-lg-3">
+            <div class="card card-custom h-100 p-3">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div class="component-icon">
+                        <i class="bi bi-file-earmark-pdf"></i>
+                    </div>
+                    <span id="pdfBadge" class="badge-status badge-healthy">
+                        <i class="bi bi-check-circle-fill"></i> Pronto
+                    </span>
+                </div>
+                <h6 class="fw-semibold mb-1">Motore Generatore PDF</h6>
+                <div class="text-muted small mb-2" id="pdfEngineText">Libreria: ReportLab</div>
+                <div class="small fw-medium mt-auto pt-2 border-top border-secondary-subtle d-flex justify-content-between">
+                    <span class="text-muted">Compilatore:</span>
+                    <span id="pdfState" class="fw-bold text-success">Disponibile</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- System & Uptime -->
+        <div class="col-md-6 col-lg-3">
+            <div class="card card-custom h-100 p-3">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div class="component-icon">
+                        <i class="bi bi-cpu"></i>
+                    </div>
+                    <span id="versionBadge" class="badge bg-secondary-subtle text-secondary-emphasis rounded-pill px-3 py-1 fw-bold">
+                        v1.0.0
+                    </span>
+                </div>
+                <h6 class="fw-semibold mb-1">Uptime del Server</h6>
+                <div class="text-muted small mb-2" id="uptimeText">Avvio in corso...</div>
+                <div class="small fw-medium mt-auto pt-2 border-top border-secondary-subtle d-flex justify-content-between">
+                    <span class="text-muted">WooCommerce:</span>
+                    <span id="wooStatus" class="fw-bold text-muted">-</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Technical Details Accordion / Code Box -->
+    <div class="card card-custom p-3 mb-4">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+            <h6 class="fw-semibold mb-0 d-flex align-items-center gap-2">
+                <i class="bi bi-code-slash text-primary"></i>
+                Risposta JSON dell'Endpoint (/api/health)
+            </h6>
+            <div class="d-flex gap-2">
+                <button class="btn btn-custom-outline btn-sm" onclick="copyJson()">
+                    <i id="copyIcon" class="bi bi-clipboard me-1"></i> <span id="copyText">Copia JSON</span>
+                </button>
+                <a href="/api/health" target="_blank" class="btn btn-custom-outline btn-sm">
+                    <i class="bi bi-box-arrow-up-right me-1"></i> Apri API
+                </a>
+            </div>
+        </div>
+        <div class="code-box" id="jsonOutput">Caricamento stato...</div>
+    </div>
+</div>
+
+<footer>
+    <div class="container d-flex flex-column flex-sm-row align-items-center justify-content-between gap-2 text-center text-sm-start">
+        <div>
+            Preventivatore &bull; Croce e Cuore Arte Sacra &copy; 2026
+        </div>
+        <div class="d-flex align-items-center gap-3">
+            <span class="text-muted">Endpoint pubblico &bull; Informazioni sanificate</span>
+        </div>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    let rawHealthData = null;
+    let refreshTimer = null;
+    let countdownSecs = 10;
+
+    // Theme Management
+    function setTheme(theme) {
+        localStorage.setItem('theme', theme);
+        let effectiveTheme = theme;
+        if (theme === 'system') {
+            effectiveTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        document.documentElement.setAttribute('data-bs-theme', effectiveTheme);
+        updateThemeDropdownLabel(theme);
+    }
+
+    function updateThemeDropdownLabel(theme) {
+        const label = document.getElementById('themeDropdownLabel');
+        if (!label) return;
+        if (theme === 'light') {
+            label.innerHTML = '<i class="bi bi-sun-fill me-1 text-warning"></i> Chiaro';
+        } else if (theme === 'dark') {
+            label.innerHTML = '<i class="bi bi-moon-stars-fill me-1 text-primary"></i> Scuro';
+        } else {
+            label.innerHTML = '<i class="bi bi-display me-1"></i> Sistema';
+        }
+    }
+
+    // Initialize Theme Label
+    const savedTheme = localStorage.getItem('theme') || 'system';
+    updateThemeDropdownLabel(savedTheme);
+
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+        if (localStorage.getItem('theme') === 'system' || !localStorage.getItem('theme')) {
+            setTheme('system');
+        }
+    });
+
+    // Health Checking
+    async function checkHealth() {
+        const refreshIcon = document.getElementById('refreshIcon');
+        if (refreshIcon) refreshIcon.classList.add('bi-arrow-repeat', 'spinner-border-sm');
+
+        try {
+            const res = await fetch('/api/health?t=' + Date.now(), {
+                headers: { 'Accept': 'application/json' }
+            });
+            const data = await res.json();
+            rawHealthData = data;
+            renderHealth(data);
+        } catch (err) {
+            renderError(err);
+        } finally {
+            if (refreshIcon) refreshIcon.classList.remove('bi-arrow-repeat', 'spinner-border-sm');
+            countdownSecs = 10;
+        }
+    }
+
+    function renderHealth(data) {
+        const hero = document.getElementById('statusHero');
+        const pulse = document.getElementById('pulseIndicator');
+        const title = document.getElementById('statusTitle');
+        const lastChecked = document.getElementById('lastCheckedText');
+
+        const now = new Date();
+        lastChecked.innerText = now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+        const isHealthy = data.status === 'healthy' || data.status === 'ok';
+        const isDegraded = data.status === 'degraded';
+
+        // Hero styling
+        hero.className = 'status-hero shadow-sm ' + (isHealthy ? 'healthy' : isDegraded ? 'degraded' : 'unhealthy');
+        pulse.className = 'pulse-indicator ' + (isHealthy ? 'healthy' : isDegraded ? 'degraded' : 'unhealthy');
+        title.innerText = isHealthy 
+            ? 'Tutti i sistemi sono operativi' 
+            : isDegraded 
+                ? 'Alcuni servizi sono parzialmente degradati' 
+                : 'Attenzione: Riscontrate anomalie di sistema';
+
+        // Version & Uptime
+        document.getElementById('versionBadge').innerText = 'v' + (data.version || '1.0.0');
+        if (data.uptime) {
+            document.getElementById('uptimeText').innerText = data.uptime.human || `${data.uptime.seconds}s`;
+        }
+
+        // Database
+        const db = data.components?.database;
+        const dbBadge = document.getElementById('dbBadge');
+        if (db && (db.ok || db.status === 'ok' || db.status === 'healthy')) {
+            dbBadge.className = 'badge-status badge-healthy';
+            dbBadge.innerHTML = '<i class="bi bi-check-circle-fill"></i> Connesso';
+            document.getElementById('dbLatency').innerText = db.latency_ms !== null && db.latency_ms !== undefined ? `${db.latency_ms} ms` : 'Attivo';
+            document.getElementById('dbLatency').className = 'fw-bold text-success';
+        } else {
+            dbBadge.className = 'badge-status badge-unhealthy';
+            dbBadge.innerHTML = '<i class="bi bi-x-circle-fill"></i> Disconnesso';
+            document.getElementById('dbLatency').innerText = 'Non raggiungibile';
+            document.getElementById('dbLatency').className = 'fw-bold text-danger';
+        }
+        document.getElementById('dbType').innerText = 'Tipo: ' + (db?.type ? db.type.toUpperCase() : 'Database');
+
+        // Storage
+        const storage = data.components?.storage;
+        const storageBadge = document.getElementById('storageBadge');
+        if (storage && (storage.ok || storage.status === 'ok' || storage.status === 'healthy')) {
+            storageBadge.className = 'badge-status badge-healthy';
+            storageBadge.innerHTML = '<i class="bi bi-check-circle-fill"></i> Operativo';
+            document.getElementById('storageState').innerText = 'Accessibile (R/W)';
+            document.getElementById('storageState').className = 'fw-bold text-success';
+        } else {
+            storageBadge.className = 'badge-status badge-unhealthy';
+            storageBadge.innerHTML = '<i class="bi bi-x-circle-fill"></i> Errore I/O';
+            document.getElementById('storageState').innerText = 'Non scrivibile';
+            document.getElementById('storageState').className = 'fw-bold text-danger';
+        }
+
+        // PDF Generator
+        const pdf = data.components?.pdf_generator;
+        const pdfBadge = document.getElementById('pdfBadge');
+        if (pdf && (pdf.ok || pdf.status === 'ok' || pdf.status === 'healthy')) {
+            pdfBadge.className = 'badge-status badge-healthy';
+            pdfBadge.innerHTML = '<i class="bi bi-check-circle-fill"></i> Pronto';
+            document.getElementById('pdfState').innerText = 'Disponibile';
+            document.getElementById('pdfState').className = 'fw-bold text-success';
+        } else {
+            pdfBadge.className = 'badge-status badge-unhealthy';
+            pdfBadge.innerHTML = '<i class="bi bi-x-circle-fill"></i> Non pronto';
+            document.getElementById('pdfState').innerText = 'Errore libreria';
+            document.getElementById('pdfState').className = 'fw-bold text-danger';
+        }
+
+        // WooCommerce
+        const woo = data.components?.integrations?.woocommerce;
+        const wooElem = document.getElementById('wooStatus');
+        if (woo && woo.configured) {
+            wooElem.innerText = 'Configurato';
+            wooElem.className = 'fw-bold text-success';
+        } else {
+            wooElem.innerText = 'Non configurato';
+            wooElem.className = 'fw-bold text-muted';
+        }
+
+        // Raw JSON output
+        document.getElementById('jsonOutput').innerText = JSON.stringify(data, null, 2);
+    }
+
+    function renderError(err) {
+        const hero = document.getElementById('statusHero');
+        const pulse = document.getElementById('pulseIndicator');
+        const title = document.getElementById('statusTitle');
+
+        hero.className = 'status-hero unhealthy shadow-sm';
+        pulse.className = 'pulse-indicator unhealthy';
+        title.innerText = 'Impossibile connettersi al server';
+
+        document.getElementById('jsonOutput').innerText = JSON.stringify({
+            status: "unreachable",
+            error: "Connessione al server di stato non riuscita"
+        }, null, 2);
+    }
+
+    function copyJson() {
+        if (!rawHealthData) return;
+        navigator.clipboard.writeText(JSON.stringify(rawHealthData, null, 2)).then(() => {
+            const btnText = document.getElementById('copyText');
+            const btnIcon = document.getElementById('copyIcon');
+            btnText.innerText = 'Copiato!';
+            btnIcon.className = 'bi bi-check-lg text-success';
+            setTimeout(() => {
+                btnText.innerText = 'Copia JSON';
+                btnIcon.className = 'bi bi-clipboard';
+            }, 2000);
+        });
+    }
+
+    // Auto-refresh timer
+    function startAutoRefresh() {
+        if (refreshTimer) clearInterval(refreshTimer);
+        refreshTimer = setInterval(() => {
+            countdownSecs--;
+            if (countdownSecs <= 0) {
+                countdownSecs = 10;
+                checkHealth();
+            }
+            const el = document.getElementById('autoRefreshStatus');
+            if (el) el.innerText = `${countdownSecs}s`;
+        }, 1000);
+    }
+
+    // Initial check
+    checkHealth();
+    startAutoRefresh();
+</script>
+</body>
+</html>
